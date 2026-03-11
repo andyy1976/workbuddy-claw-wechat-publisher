@@ -1,0 +1,25 @@
+{
+  "name": "workbuddy-claw-wechat-publisher",
+  "version": "1.0.0",
+  "description": "WorkBuddy Claw 实战 - 自动化微信公众号发布系统",
+  "main": "src/markdown-to-wechat.js",
+  "scripts": {
+    "start": "node src/markdown-to-wechat.js",
+    "cover": "node src/generate_cover.js",
+    "convert": "node src/markdown-to-wechat.js"
+  },
+  "keywords": [
+    "workbuddy",
+    "wechat",
+    "markdown",
+    "html",
+    "publisher",
+    "automation"
+  ],
+  "author": "OpenClaw Developer",
+  "license": "MIT",
+  "dependencies": {
+    "markdown-it": "^14.0.0",
+    "sharp": "^0.33.0"
+  }
+}
