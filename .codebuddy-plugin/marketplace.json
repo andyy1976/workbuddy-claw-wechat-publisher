@@ -1,0 +1,25 @@
+{
+  "name": "workbuddy-claw-marketplace",
+  "owner": {
+    "name": "andyy1976",
+    "email": ""
+  },
+  "description": "WorkBuddy Claw 实战工具集 - 微信公众号发布器及配套工具",
+  "plugins": [
+    {
+      "name": "wechat-publisher",
+      "source": ".",
+      "description": "微信公众号智能发布器：实时热点抓取、关键词过滤、AI文章生成、一键发布草稿箱。支持多账号配置和每日定时任务。",
+      "version": "1.1.0",
+      "author": {
+        "name": "andyy1976"
+      },
+      "homepage": "https://github.com/andyy1976/workbuddy-claw-wechat-publisher",
+      "repository": "https://github.com/andyy1976/workbuddy-claw-wechat-publisher",
+      "license": "MIT",
+      "keywords": ["wechat", "微信公众号", "自动发布", "热点", "AI写作", "内容运营"],
+      "category": "content",
+      "strict": false
+    }
+  ]
+}

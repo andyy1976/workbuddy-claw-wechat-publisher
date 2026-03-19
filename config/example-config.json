@@ -1,0 +1,45 @@
+{
+  "_comment": "这是示例配置文件，复制为 user-config.json 并填入你的真实信息",
+  "wechat": {
+    "appId": "wx你的AppID",
+    "appSecret": "你的AppSecret32位密钥",
+    "thumbMediaId": "你的封面图素材ID",
+    "author": "WorkBuddy"
+  },
+  "keywords": {
+    "primary": [
+      "人工智能",
+      "AI",
+      "机器人",
+      "大模型",
+      "特斯拉",
+      "Tesla",
+      "智能体",
+      "具身智能"
+    ],
+    "secondary": [
+      "通信",
+      "互联网",
+      "5G",
+      "自动驾驶",
+      "新能源",
+      "工业软件",
+      "OpenAI",
+      "DeepSeek"
+    ],
+    "exclude": [
+      "明星",
+      "娱乐",
+      "八卦",
+      "综艺",
+      "网红"
+    ]
+  },
+  "publish": {
+    "targetTime": "07:00",
+    "minHeat": 50000,
+    "contentStyle": "深度分析型",
+    "minWords": 1200,
+    "maxWords": 2000
+  }
+}
