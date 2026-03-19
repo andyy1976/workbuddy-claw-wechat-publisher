@@ -1,20 +1,51 @@
 {
   "name": "workbuddy-claw-wechat-publisher",
   "version": "1.1.0",
-  "description": "WorkBuddy 微信公众号智能发布器：热点抓取 + 关键词过滤 + AI文章生成 + 一键发布草稿箱",
-  "main": "src/markdown-to-wechat.js",
-  "scripts": {
-    "start": "node scripts/engine.js",
-    "hotspot": "node scripts/engine.js --hotspot",
-    "validate": "node scripts/engine.js --validate",
-    "cover": "node src/generate_cover.js",
-    "convert": "node src/markdown-to-wechat.js"
+  "description": "微信公众号智能发布器：热点抓取 + 关键词过滤 + AI文章生成 + 一键发布草稿箱",
+  "main": "index.js",
+  "bin": {
+    "wechat-publisher": "./index.js"
   },
-  "keywords": ["workbuddy", "wechat", "markdown", "html", "publisher", "automation", "hotspot", "AI"],
+  "scripts": {
+    "start": "node index.js",
+    "hotspot": "node index.js --hotspot",
+    "validate": "node index.js --validate",
+    "publish": "node index.js --publish",
+    "diary": "node index.js --diary",
+    "cover": "node src/generate_cover.js",
+    "convert": "node src/markdown-to-wechat.js",
+    "pack": "npm pack"
+  },
+  "keywords": [
+    "wechat",
+    "微信公众号",
+    "自动发布",
+    "热点",
+    "AI写作",
+    "content",
+    "automation",
+    "openclaw",
+    "skill"
+  ],
   "author": "andyy1976",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/andyy1976/workbuddy-claw-wechat-publisher"
+  },
+  "bugs": {
+    "url": "https://github.com/andyy1976/workbuddy-claw-wechat-publisher/issues"
+  },
+  "homepage": "https://github.com/andyy1976/workbuddy-claw-wechat-publisher#readme",
   "dependencies": {
     "markdown-it": "^14.0.0",
     "sharp": "^0.33.0"
+  },
+  "openclaw": {
+    "skill": {
+      "name": "微信公众号发布器",
+      "description": "当用户需要发布微信公众号文章、查看热点、配置公众号参数时激活",
+      "triggers": ["发公众号", "微信推文", "wx-publish", "热点文章"]
+    }
   }
 }

@@ -1,0 +1,73 @@
+{
+    "name": "WorkBuddy 内容引擎配置",
+    "version": "2.0",
+    "wechat": {
+        "appId": "wxbe7fd856ee4ae690",
+        "appSecret": "ec65f0021eed492b6bac0670c63d67d2",
+        "thumbMediaId": "fOSSI4rB_2kncg_EYxVB_3HgoVsm5uB1xT8Rd7553eHblT_oGvhZFjixaikeBYvg",
+        "author": "WorkBuddy"
+    },
+    "keywords": {
+        "primary": [
+            "人工智能",
+            "AI",
+            "机器人",
+            "大模型",
+            "特斯拉",
+            "Tesla",
+            "智能体",
+            "Agent",
+            "工业软件",
+            "具身智能"
+        ],
+        "secondary": [
+            "通信",
+            "互联网",
+            "5G",
+            "6G",
+            "自动驾驶",
+            "智能驾驶",
+            "OpenAI",
+            "ChatGPT",
+            "DeepSeek",
+            "豆包",
+            "Kimi"
+        ],
+        "exclude": [
+            "明星",
+            "娱乐",
+            "综艺",
+            "八卦",
+            "网红"
+        ]
+    },
+    "publish": {
+        "autoPublish": false,
+        "targetTime": "07:00",
+        "minHeat": 50000,
+        "maxArticlesPerDay": 3,
+        "titleFormulas": [
+            "悬念式+数字式",
+            "情感式+反转式",
+            "对比式+洞察式",
+            "提问式+解答式"
+        ],
+        "contentStyle": "深度分析型",
+        "minWords": 1200,
+        "maxWords": 2000
+    },
+    "hotspot": {
+        "sources": [
+            "微博热搜",
+            "百度热搜",
+            "知乎热榜"
+        ],
+        "refreshInterval": 3600000,
+        "historyDays": 7
+    },
+    "advanced": {
+        "useMemory": true,
+        "learnFromPublished": true,
+        "qualityThreshold": 7
+    }
+}
