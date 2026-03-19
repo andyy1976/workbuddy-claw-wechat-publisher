@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Output directories
+output/
+output-enhanced/
+*.html
+*.png
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# Coverage
+coverage/
+
+# Build
+dist/
+build/

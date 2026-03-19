@@ -1,4 +1,5 @@
 @echo off
+<<<<<<< HEAD
 chcp 65001 >nul
 echo.
 echo ========================================
@@ -46,4 +47,28 @@ echo ========================================
 echo  完成！访问以下地址安装插件：
 echo  /plugin marketplace add andyy1976/workbuddy-claw-wechat-publisher
 echo ========================================
+=======
+echo ========================================
+echo GitHub Push Script
+echo ========================================
+
+cd /d "%~dp0"
+
+echo.
+echo Step 1: Adding all files...
+git add -A
+
+echo.
+echo Step 2: Committing changes...
+git commit -m "Initial commit: WorkBuddy Claw WeChat Publisher"
+
+echo.
+echo Step 3: Creating GitHub repository...
+echo Please run these commands manually if needed:
+echo   git remote add origin https://github.com/andyy1976/workbuddy-claw-wechat-publisher.git
+echo   git push -u origin master
+
+echo.
+echo Done! 
+>>>>>>> 8f8a0157cbc9156f77fc0b94f004b1d55bb75b21
 pause
