@@ -1,0 +1,57 @@
+{
+  "appId": "wxbe7fd856ee4ae690",
+  "appSecret": "ec65f0021eed492b6bac0670c63d67d2",
+  "thumbMediaId": "fOSSI4rB_2kncg_EYxVB_3HgoVsm5uB1xT8Rd7553eHblT_oGvhZFjixaikeBYvg",
+  
+  "schedules": {
+    "daily": {
+      "enabled": true,
+      "hour": 9,
+      "minute": 0,
+      "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    },
+    "weekly": {
+      "enabled": false,
+      "dayOfWeek": 0,
+      "hour": 10,
+      "minute": 0
+    }
+  },
+  
+  "articleSources": {
+    "current": "wechat_publish_config.json",
+    "alternatives": [
+      {
+        "name": "technology_articles.json",
+        "path": "./technology_articles.json"
+      },
+      {
+        "name": "daily_news.json",
+        "path": "./daily_news.json"
+      }
+    ]
+  },
+  
+  "logging": {
+    "enabled": true,
+    "logFile": "./automation_logs.json",
+    "maxLogEntries": 100
+  },
+  
+  "notifications": {
+    "email": {
+      "enabled": false,
+      "address": ""
+    },
+    "webhook": {
+      "enabled": false,
+      "url": ""
+    }
+  },
+  
+  "retry": {
+    "enabled": true,
+    "maxAttempts": 3,
+    "interval": 30000
+  }
+}

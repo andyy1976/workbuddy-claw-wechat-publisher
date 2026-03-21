@@ -1,0 +1,92 @@
+{
+  "system": {
+    "name": "智能双文章生成系统",
+    "version": "1.0.0",
+    "description": "每次选择一个最热门主题，同时生成小红书和公众号两篇文章，都发布到公众号草稿箱",
+    "created": "2026-03-21"
+  },
+  
+  "article_settings": {
+    "xiaohongshu": {
+      "max_chars": 1000,
+      "style": "亲切、实用、有故事感",
+      "emoji_usage": "适当使用emoji增强亲切感",
+      "hashtags": "必须包含5-10个相关话题标签"
+    },
+    
+    "wechat_public": {
+      "style": "专业、深度、结构化",
+      "structure": "标准公众号文章格式",
+      "length": "中等篇幅，2000-3000字为宜",
+      "keywords": "每篇文章包含5-8个关键词"
+    },
+    
+    "topic_selection": {
+      "method": "基于热度评分智能选择",
+      "hot_topics_count": 5,
+      "update_frequency": "每日更新",
+      "scoring_factors": ["技术热度", "社会关注度", "投资潜力", "应用广泛性"]
+    }
+  },
+  
+  "publish_settings": {
+    "target_platform": "微信公众号草稿箱",
+    "publish_both_articles": true,
+    "article_types": ["小红书风格", "公众号风格"],
+    "cover_image": "统一使用配置的封面图",
+    "author_name": "科技内容生成系统"
+  },
+  
+  "quality_control": {
+    "content_check": {
+      "check_grammar": true,
+      "verify_facts": true,
+      "ensure_originality": true,
+      "format_optimization": true
+    },
+    
+    "style_adjustment": {
+      "adapt_for_platform": true,
+      "maintain_brand_voice": true,
+      "optimize_for_readability": true
+    }
+  },
+  
+  "automation_settings": {
+    "execution_frequency": "手动触发或定时任务",
+    "log_retention": "保留最近100条执行记录",
+    "error_handling": "自动重试和错误报告",
+    "backup_files": "生成的文章自动保存备份"
+  },
+  
+  "performance_metrics": {
+    "targets": {
+      "generation_time": "5分钟内完成双文章生成",
+      "publish_success_rate": "95%以上",
+      "content_quality_score": "85分以上（基于内部评分）",
+      "user_engagement": "高于平台平均水平"
+    },
+    
+    "tracking": {
+      "article_length": "记录每篇文章字数",
+      "publish_status": "记录发布成功/失败状态",
+      "generation_timestamp": "记录生成时间",
+      "topic_trend_score": "记录选题热度分数"
+    }
+  },
+  
+  "development_roadmap": {
+    "v1.0.0": "基础双文章生成功能",
+    "v1.1.0": "增加AI内容优化",
+    "v1.2.0": "支持多主题选择",
+    "v1.3.0": "增加数据分析和报告",
+    "v2.0.0": "集成多平台发布（小红书、知乎等）"
+  },
+  
+  "usage_notes": {
+    "prerequisites": "需要配置微信公众号API参数",
+    "environment": "Node.js环境，需要网络连接",
+    "configuration": "编辑automation_config.json或设置环境变量",
+    "testing": "建议先在测试环境验证配置"
+  }
+}
