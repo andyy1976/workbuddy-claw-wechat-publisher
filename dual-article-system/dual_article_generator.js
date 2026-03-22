@@ -15,7 +15,107 @@ class DualArticleGenerator {
             month: 'long',
             day: 'numeric'
         });
+        this.initTopics();
+    }
+
+    /**
+     * Markdown 转微信 HTML
+     */
+    markdownToWechatHtml(markdownContent) {
+        const baseStyle = `font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;max-width:680px;margin:0 auto;color:#1e293b;`;
+        let html = `<section style="${baseStyle}">`;
         
+        let cleaned = markdownContent
+            .replace(/^#+\s*/gm, '')
+            .replace(/\*\*(.*?)\*\*/g, '$1')
+            .replace(/\*(.*?)\*/g, '$1')
+            .replace(/^>\s*/gm, '')
+            .replace(/^[-*_]{3,}$/gm, '')
+            .replace(/`(.*?)`/g, '$1')
+            .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+        
+        const lines = cleaned.split('\n');
+        let inList = false;
+        let inBox = false;
+        let boxType = '';
+        
+        for (const line of lines) {
+            let trimmed = line.trim();
+            if (!trimmed) continue;
+            
+            if (trimmed.match(/^[-*_]{3,}$/)) {
+                if (inList) { html += '</ul>'; inList = false; }
+                if (inBox) { html += '</section>'; inBox = false; }
+                html += '<p style="margin:20px 0;border-top:1px solid #e5e7eb;"></p>';
+                continue;
+            }
+            
+            if (trimmed.match(/^(\d+)\.\s/) || trimmed.match(/^[-●]\s/)) {
+                if (inBox) { html += '</section>'; inBox = false; }
+                if (!inList) { html += '<ul style="padding-left:20px;margin:16px 0;">'; inList = true; }
+                const content = trimmed.replace(/^(\d+)\.\s/, '').replace(/^[-●]\s/, '');
+                html += `<li style="font-size:15px;line-height:1.8;color:#374151;margin:8px 0;">${content}</li>`;
+                continue;
+            }
+            
+            if (trimmed.includes('建议') || trimmed.includes('怎么办') || trimmed.startsWith('💡') || trimmed.includes('能做什么')) {
+                if (inList) { html += '</ul>'; inList = false; }
+                if (inBox) { html += '</section>'; inBox = false; }
+                html += `<section style="background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:1px solid #bfdbfe;border-radius:12px;padding:16px 20px;margin:20px 0;">
+<p style="font-size:14px;font-weight:700;color:#1d4ed8;margin:0 0 10px;">💡 ${trimmed.replace('💡', '').trim()}</p>`;
+                inBox = true;
+                boxType = 'suggest';
+                continue;
+            }
+            
+            if (trimmed.includes('背景') || trimmed.includes('核心') || trimmed.includes('📌')) {
+                if (inList) { html += '</ul>'; inList = false; }
+                if (inBox) { html += '</section>'; inBox = false; }
+                html += `<section style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:16px 20px;margin:20px 0;">
+<p style="font-size:14px;font-weight:700;color:#c2410c;margin:0 0 10px;">📌 ${trimmed.replace('📌', '').trim()}</p>`;
+                inBox = true;
+                boxType = 'background';
+                continue;
+            }
+            
+            if (trimmed.length < 50 && (trimmed.includes('！') || trimmed.includes('?') || trimmed.includes('？') || trimmed.includes('。') || trimmed.startsWith('"'))) {
+                if (inList) { html += '</ul>'; inList = false; }
+                if (inBox && boxType === 'suggest') {
+                    html += `<p style="font-size:14px;line-height:1.8;color:#1d4ed8;margin:4px 0;">${trimmed}</p>`;
+                    continue;
+                }
+            }
+            
+            if (inBox && !trimmed.includes('建议') && !trimmed.includes('怎么办') && !trimmed.includes('背景') && !trimmed.includes('核心')) {
+                html += '</section>';
+                inBox = false;
+            }
+            
+            if (inList && !trimmed.match(/^(\d+)\.\s/) && !trimmed.match(/^[-●]\s/)) {
+                html += '</ul>';
+                inList = false;
+            }
+            
+            let cleanText = trimmed
+                .replace(/^[>*_\-\s]+/, '')
+                .replace(/\s*[>*_\-\s]+$/, '')
+                .replace(/[*_]{2,}/g, '')
+                .trim();
+            if (cleanText) {
+                html += `<p style="font-size:15px;line-height:1.9;color:#374151;margin:12px 0;text-indent:2em;">${cleanText}</p>`;
+            }
+        }
+        
+        if (inList) html += '</ul>';
+        if (inBox) html += '</section>';
+        html += '</section>';
+        
+        return html;
+    }
+    
+    initTopics() {
         // 热门主题库（带热度评分）
         this.hotTopics = [
             {
@@ -382,7 +482,7 @@ ${topic.category}作为当今最具发展潜力的技术领域之一，正在深
                     title: title,
                     author: "科技内容生成系统",
                     digest: `${articleType}文章：${title.substring(0, 80)}...`,
-                    content: content,
+                    content: this.markdownToWechatHtml(content),
                     thumb_media_id: config.thumbMediaId,
                     show_cover_pic: 1,
                     need_open_comment: 1,
@@ -611,19 +711,23 @@ ${topic.category}作为当今最具发展潜力的技术领域之一，正在深
             const xhsArticle = this.generateXiaohongshuArticle(topic);
             const wechatArticle = this.generateWechatArticle(topic);
             
-            // 3. 保存文章到文件
+            // 3. 保存文章到文件（沙盒环境跳过）
             console.log('\n💾 步骤3：保存文章文件');
-            const savedFiles = this.saveArticlesToFile(xhsArticle, wechatArticle, topic);
+            // const savedFiles = this.saveArticlesToFile(xhsArticle, wechatArticle, topic);
+            console.log('⚠️ 文件保存已跳过（沙盒限制）');
+            const savedFiles = { success: false };
             
             // 4. 发布文章到公众号草稿箱
             console.log('\n📤 步骤4：发布到公众号草稿箱');
             
+            // 小红书风格文章发布
             const xhsResult = await this.publishToWechatDraft(
                 `${topic.emoji} ${topic.title} | 小红书风格分享`,
                 xhsArticle,
                 '小红书'
             );
             
+            // 公众号文章发布
             const wechatResult = await this.publishToWechatDraft(
                 topic.title,
                 wechatArticle,

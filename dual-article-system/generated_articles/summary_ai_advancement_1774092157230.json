@@ -1,0 +1,28 @@
+{
+  "date": "2026年3月21日",
+  "topic": {
+    "id": "ai_advancement",
+    "title": "2026年AI新突破：多模态智能体的革命性进展",
+    "category": "人工智能",
+    "trendScore": 95
+  },
+  "articles": {
+    "xiaohongshu": {
+      "title": "🤖✨ 2026年AI新突破：多模态智能体的革命性进展 | 超详细攻略分享",
+      "charCount": 1000,
+      "tags": [
+        "#AI",
+        "#人工智能",
+        "#科技",
+        "#未来",
+        "#职场提升"
+      ]
+    },
+    "wechat": {
+      "title": "2026年AI新突破：多模态智能体的革命性进展",
+      "charCount": 2656
+    }
+  },
+  "publishStatus": "ready",
+  "generationTime": "2026-03-21T11:22:37.233Z"
+}

@@ -69,5 +69,24 @@
         "useMemory": true,
         "learnFromPublished": true,
         "qualityThreshold": 7
+    },
+    "ai": {
+        "provider": "deepseek",
+        "model": "deepseek-coder",
+        "apiKey": "sk-be1babe391c7428a80eca2b832c44cc2",
+        "baseUrl": "https://api.deepseek.com"
+    },
+    "tags": {
+        "enable": true,
+        "default": [
+            "公众号创作",
+            "公众号运营",
+            "自媒体新人成长记",
+            "公众号写作心得",
+            "QClaw",
+            "WorkBuddy",
+            "CodeBuddy"
+        ],
+        "color": "#1d4ed8"
     }
 }
