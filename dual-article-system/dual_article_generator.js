@@ -116,25 +116,138 @@ class DualArticleGenerator {
     }
     
     initTopics() {
-        // 热门主题库（带热度评分）
+        // 热门主题库（带热度评分 + 公共性评分）
+        // 公共性评分标准：画面感+国家叙事+反差+真实热点
         this.hotTopics = [
+            {
+                id: 'guizhou_accident',
+                title: '贵州赫章交通事故致学生2死11伤：校园安全警钟再次敲响',
+                category: '社会热点',
+                keywords: ['贵州', '交通事故', '学生', '校园安全', '教育', '悲剧'],
+                trendScore: 98,
+                publicScore: 95,
+                hasVisual: true, // 交通事故现场
+                hasContrast: true, // 学生 vs 事故
+                xiaohongshuTags: ['#贵州', '#交通安全', '#校园安全', '#教育', '#安全'],
+                emoji: '🚑⚠️'
+            },
+            {
+                id: 'taiwan_reaction',
+                title: '被喀麦隆标中国一省台当局破大防：国际认知战背后的真相',
+                category: '国际关系',
+                keywords: ['喀麦隆', '台湾', '国际', '政治', '一个中国', '外交'],
+                trendScore: 95,
+                publicScore: 90,
+                hasVisual: false,
+                hasNationalNarrative: true, // 涉及中国
+                xiaohongshuTags: ['#国际', '#台湾', '#一个中国', '#外交', '#政治'],
+                emoji: '🌍🇨🇳'
+            },
+            {
+                id: 'j10_designer',
+                title: '歼10总师不想让国家挨打：大国重器背后的家国情怀',
+                category: '国家工程',
+                keywords: ['歼10', '军工', '总师', '国防', '中国制造', '大国重器'],
+                trendScore: 92,
+                publicScore: 95,
+                hasVisual: true, // 歼10战斗机
+                hasNationalNarrative: true, // 国家叙事
+                hasContrast: true, // 个人vs国家
+                xiaohongshuTags: ['#歼10', '#军工', '#国防', '#中国制造', '#大国重器'],
+                emoji: '✈️🇨🇳'
+            },
+            {
+                id: 'robot_kid',
+                title: '小孩看机器人跳舞挨了一巴掌：当科技遇上熊孩子',
+                category: '社会热点',
+                keywords: ['机器人', '小孩', '科技', '教育', '熊孩子', '人工智能'],
+                trendScore: 95,
+                publicScore: 92,
+                hasVisual: true,
+                hasContrast: true,
+                published: true,
+                xiaohongshuTags: ['#机器人', '#熊孩子', '#科技', '#教育', '#搞笑'],
+                emoji: '🤖👦'
+            },
+            {
+                id: 'food_safety',
+                title: '央视曝光活鱼麻醉剂滥用乱象：食品安全如何守护',
+                category: '食品安全',
+                keywords: ['食品安全', '活鱼', '麻醉剂', '央视', '消费', '健康'],
+                trendScore: 95,
+                publicScore: 98, // 每个人都吃饭，公共性最高
+                hasVisual: true, // 活鱼画面
+                hasNationalNarrative: true, // 央视曝光
+                hasContrast: true, // 商家vs消费者
+                published: true, // 已发布
+                xiaohongshuTags: ['#食品安全', '#健康', '#消费', '#央视曝光', '#生活'],
+                emoji: '🐟⚠️'
+            },
+            {
+                id: 'oil_price',
+                title: '油价又涨了！中国石化提示提前错峰加油：普通人如何应对能源波动',
+                category: '民生话题',
+                keywords: ['油价', '加油', '中国石化', '能源', '出行', '民生'],
+                trendScore: 90,
+                publicScore: 95, // 每个人都要加油
+                hasVisual: true, // 加油站画面
+                hasNationalNarrative: true, // 国家能源
+                hasContrast: true, // 普通人vs能源巨头
+                published: true, // 已发布
+                xiaohongshuTags: ['#油价', '#加油', '#省钱', '#民生', '#出行'],
+                emoji: '⛽💰'
+            },
+            {
+                id: 'water_management',
+                title: '9组数据见证大国治水：从南水北调到智慧水利',
+                category: '国家工程',
+                keywords: ['南水北调', '水利工程', '大国重器', '治水', '基础设施'],
+                trendScore: 85,
+                publicScore: 90, // 国家工程
+                hasVisual: true, // 大坝画面
+                hasNationalNarrative: true, // 国家叙事
+                hasContrast: false,
+                xiaohongshuTags: ['#大国重器', '#水利工程', '#中国', '#科技', '#基建'],
+                emoji: '🌊🏛️'
+            },
+            {
+                id: 'beidou_planter',
+                title: '热搜第一！北斗导航机器人在沙漠5秒种一棵树：一场静悄悄的农业革命',
+                category: '农业科技',
+                keywords: ['北斗', '导航', '机器人', '沙漠', '种树', '农业', '生态'],
+                trendScore: 98, // 最高热度
+                publicScore: 95, // 最高公共性
+                hasVisual: true, // 有画面感：沙漠种树
+                hasNationalNarrative: true, // 有国家叙事
+                hasContrast: true, // 高科技vs农业
+                published: true, // 已发布，排除
+                xiaohongshuTags: ['#北斗', '#农业科技', '#生态', '#中国科技', '#沙漠治理'],
+                emoji: '🌳🤖'
+            },
             {
                 id: 'ai_advancement',
                 title: '2026年AI新突破：多模态智能体的革命性进展',
                 category: '人工智能',
                 keywords: ['AI', '多模态', '智能体', 'DeepSeek', '技术突破', '人工智能', '机器学习'],
                 trendScore: 95, // 热度评分（0-100）
+                publicScore: 70, // 公共性评分（0-100）- 科技圈热度高，但公共性一般
+                hasVisual: true, // 有画面感
+                hasContrast: true, // 有反差
+                published: true, // 已发布，排除
                 xiaohongshuTags: ['#AI', '#人工智能', '#科技', '#未来', '#职场提升'],
                 emoji: '🤖✨'
             },
             {
-                id: 'web3_evolution',
-                title: 'Web3 3.0时代：去中心化应用的商业落地路径',
-                category: '区块链',
-                keywords: ['Web3', '区块链', '去中心化', 'DAO', 'NFT', '加密货币', '数字资产'],
-                trendScore: 88,
-                xiaohongshuTags: ['#Web3', '#区块链', '#投资理财', '#数字资产', '#科技前沿'],
-                emoji: '💎🚀'
+                id: 'tesla_robot',
+                title: '特斯拉人形机器人引爆热议：2026年，人类文明的分水岭',
+                category: '人工智能',
+                keywords: ['特斯拉', '机器人', '人形机器人', '马斯克', 'AI', '自动化'],
+                trendScore: 90,
+                publicScore: 75, // 科技圈热度，公共性中等
+                hasVisual: true,
+                hasContrast: true,
+                xiaohongshuTags: ['#特斯拉', '#机器人', '#科技', '#未来', '#马斯克'],
+                emoji: '🤖⚡'
             },
             {
                 id: 'green_tech',
@@ -142,6 +255,10 @@ class DualArticleGenerator {
                 category: '可持续发展',
                 keywords: ['碳中和', '绿色科技', 'ESG', '可再生能源', '环保', '可持续发展'],
                 trendScore: 92,
+                publicScore: 85, // 国家战略，公共性高
+                hasVisual: true,
+                hasNationalNarrative: true,
+                published: true, // 已发布
                 xiaohongshuTags: ['#碳中和', '#环保', '#可持续生活', '#绿色科技', '#投资趋势'],
                 emoji: '🌱💡'
             },
@@ -151,6 +268,8 @@ class DualArticleGenerator {
                 category: '职场科技',
                 keywords: ['远程办公', '数字化转型', '混合工作', '企业协作', '生产力工具'],
                 trendScore: 85,
+                publicScore: 80, // 职场人普遍关心
+                hasVisual: false,
                 xiaohongshuTags: ['#远程办公', '#职场干货', '#工作效率', '#数字化转型', '#职业发展'],
                 emoji: '💼🏡'
             },
@@ -160,6 +279,9 @@ class DualArticleGenerator {
                 category: '医疗健康',
                 keywords: ['医疗AI', '精准医疗', '健康管理', '基因编辑', '远程医疗', '数字健康'],
                 trendScore: 90,
+                publicScore: 85, // 每个人都关心健康
+                hasVisual: false,
+                hasNationalNarrative: false,
                 xiaohongshuTags: ['#健康', '#医疗AI', '#养生', '#科技医疗', '#自我提升'],
                 emoji: '🏥❤️'
             }
@@ -167,137 +289,110 @@ class DualArticleGenerator {
     }
 
     /**
-     * 智能选择今日最热门主题
+     * 智能选择今日最热门主题（爆款公式：热度+公共性，排除已发布）
      */
     selectTodayHotTopic() {
         console.log('🔍 正在分析今日热点主题...');
         
-        // 基于热度评分选择
-        const hotTopic = this.hotTopics.reduce((prev, current) => 
-            prev.trendScore > current.trendScore ? prev : current
-        );
+        // 排除已发布的选题
+        const availableTopics = this.hotTopics.filter(t => !t.published);
+        
+        if (availableTopics.length === 0) {
+            console.log('⚠️  所有选题已发布，使用全部选题');
+            return this.hotTopics[0];
+        }
+        
+        // 爆款公式：综合评分 = 热度*0.6 + 公共性*0.4
+        const hotTopic = availableTopics.reduce((prev, current) => {
+            const prevScore = (prev.trendScore || 50) * 0.6 + (prev.publicScore || 50) * 0.4;
+            const currScore = (current.trendScore || 50) * 0.6 + (current.publicScore || 50) * 0.4;
+            return prevScore > currScore ? prev : current;
+        });
         
         console.log(`🎯 已选择今日热点主题：${hotTopic.title}`);
         console.log(`   • 热度评分：${hotTopic.trendScore}/100`);
+        console.log(`   • 公共性评分：${hotTopic.publicScore || 50}/100`);
+        console.log(`   • 综合评分：${((hotTopic.trendScore || 50) * 0.6 + (hotTopic.publicScore || 50) * 0.4).toFixed(0)}/100`);
         console.log(`   • 分类：${hotTopic.category}`);
         console.log(`   • 关键词：${hotTopic.keywords.join('、')}`);
+        
+        // 爆款要素提示
+        if (hotTopic.hasVisual) console.log(`   • ✅ 有画面感`);
+        if (hotTopic.hasNationalNarrative) console.log(`   • ✅ 有国家叙事`);
+        if (hotTopic.hasContrast) console.log(`   • ✅ 有反差感`);
         
         return hotTopic;
     }
 
     /**
-     * 生成小红书风格文章（1000字以下）
+     * 生成小红书风格文章（真正的姐妹聊天风）
      */
     generateXiaohongshuArticle(topic) {
         console.log('📝 正在生成小红书风格文章...');
         
-        // 小红书风格特点：亲切、实用、有故事感
+        // 小红书风格：姐妹聊天 + 情绪价值 + 800字以内
         const article = `
-${topic.emoji} ${topic.title} | 超详细攻略分享
+${topic.emoji} 姐妹们！${topic.title}
 
-大家好呀～今天和大家聊聊「${topic.category}」这个超热门话题！🎯
+救命！这个话题最近太火了🔥 我刷朋友圈全是它！
 
-作为一个科技爱好者和职场人，我最近发现身边好多朋友都在关注${topic.keywords[0]}相关的内容。正好最近做了一些研究，今天就和大家分享一下我的心得～💡
+你们知道吗？我前两天还在纠结要不要深入了解${topic.category}，结果一研究，真香！今天必须跟你们分享～ 
 
----
-### 💡 为什么${topic.category}这么火？
-最近${topic.keywords[0]}真的刷爆了我的社交圈！无论是朋友圈还是小红书，大家都在讨论这个话题。
+✨ **先说说为什么这么火**
 
-我总结了几个主要原因：
-1. **技术突破明显** - 最近几个月真的有很多创新
-2. **应用场景丰富** - 从工作到生活都能用上
-3. **投资热度高** - 资本市场也很看好
-4. **社会关注度** - 媒体都在报道相关进展
+${topic.keywords[0]}最近真的太火了！我身边好多姐妹都在讨论。我总结了一下：
 
----
-### 🚀 三大核心趋势（2026最新版）
-经过深入研究和行业交流，我发现当前主要有这三大趋势：
+📌 有画面感 - 一看就懂
+📌 跟生活相关 - 真的能用到
+📌 有话题感 - 适合跟闺蜜聊
 
-**1. 技术平民化 📱**
-现在${topic.keywords[0]}技术越来越容易使用了，普通人也能轻松上手。很多工具都提供了友好的界面，不再需要专业背景。
+💡 **我的真实体验**
 
-**2. 场景多样化 🌈**
-从最初的单一场景，到现在已经渗透到生活的各个方面。我总结了几个典型应用场景：
-- 职场提升：提高工作效率
-- 个人成长：学习新技能
-- 生活优化：改善日常生活
-- 投资理财：把握投资机会
+说实话，我一开始觉得${topic.category}离我好远。
 
-**3. 生态完善化 🌍**
-整个产业链越来越成熟，从技术研发到应用落地都形成了完整的体系。
+但是！上周我试了一下，真的震惊了！
 
----
-### 🔧 实用建议和操作指南
-基于我的实际体验，给大家几点建议：
+比如：
+- 我用${topic.keywords[0]}帮老板写了个方案，平时要2小时，这次15分钟搞定！老板直接夸我效率高😭
+- 我朋友用这个技能，周末不用加班了！
 
-**新手入门：**
-1. **先了解基础知识** - 不要一上来就搞得太复杂
-2. **从简单工具开始** - 选一个用户友好的平台
-3. **多交流多学习** - 加入相关社群和讨论
-4. **循序渐进** - 不要急于求成
+姐妹们，这真的不是智商税！
 
-**进阶技巧：**
-• 利用AI工具提高效率
-• 建立个人知识体系
-• 关注行业动态和趋势
-• 实际应用和总结复盘
+🎯 **新手怎么上手？**
 
----
-### 💰 投资和职业机会
-如果你对这方面感兴趣，可以考虑这几个方向：
+别一上来就搞太复杂的！
 
-**投资机会：**
-1. 相关科技公司股票
-2. 行业ETF基金
-3. 新兴创业项目
-4. 数字资产投资
+我建议：
+1️⃣ 先选一个好用的工具
+2️⃣ 每天花10分钟试试
+3️⃣ 加入一个学习群，跟姐妹们交流
 
-**职业发展：**
-• 技术研发岗位
-• 产品运营职位
-• 市场推广方向
-• 咨询服务领域
+💰 **值不值得投入？**
 
----
-### ❤️ 个人心得体会
-作为一个接触${topic.category}多年的爱好者，我想分享几点真实感受：
+我觉得值！但要看你的目标：
+- 如果只是好奇 → 先了解基础就行
+- 如果想提升效率 → 值得花时间学
+- 如果想做副业 → 可以深入研究
 
-1. **保持好奇心**真的很重要
-2. **持续学习**是跟上时代的唯一方式
-3. **实际行动**比纸上谈兵更有价值
-4. **找到乐趣**才能坚持下去
+⚠️ **避坑提醒**
 
----
-### 📋 实用工具推荐
-经过测试，这几个工具真的很好用：
+别被那些"速成课"骗了！
+我踩过的坑：
+❌ 买了299的课，发现B站免费有
+❌ 加了付费群，全是广告
 
-✨ **效率工具类：**
-- 笔记管理：Notion、语雀
-- 团队协作：飞书、钉钉
-- 思维导图：XMind、幕布
-
-🚀 **学习资源类：**
-- 在线课程：Coursera、慕课网
-- 行业报告：各大研究机构
-- 社群交流：相关垂直社群
-
----
-### 🌟 最后想说
-${topic.category}领域真的充满了无限可能！无论你是想提升工作效率，还是想了解投资机会，都值得深入了解一下。
-
-最重要的是：**行动起来！** 哪怕每天只花15分钟学习相关知识，长期积累下来也会有质的飞跃。
-
-希望大家都能在这个快速变化的时代里，找到适合自己的成长路径！💪
+真心建议：先自学，有基础再考虑付费。
 
 ---
 
-分享完毕啦～如果你对${topic.category}有什么想法或者经验，欢迎在评论区交流哦！📱
+姐妹们，${topic.category}这个方向真的有潜力！但我建议理性入局～
 
-${topic.xiaohongshuTags.join(' ')}
-#每日分享 #学习打卡 #成长笔记 #职场干货 #科技前沿
+你们觉得呢？评论区聊聊呗！👇
+
+${topic.xiaohongshuTags.slice(0, 3).join(' ')}
+#职场干货 #学习打卡 #成长笔记
         `.trim();
         
-        // 确保字数控制在1000字以内
         const charCount = article.length;
         console.log(`✅ 小红书文章生成完成（${charCount} 字符）`);
         
@@ -362,6 +457,8 @@ ${topic.xiaohongshuTags.join(' ')}
 
 **教育培训**：个性化学习系统的应用使得学习效率平均提高了55%，知识掌握程度提升了40%。
 
+> 💡 **实用提示**：这份行业应用清单，可以直接转给正在做数字化转型的同事，帮他们快速了解${topic.category}技术在各领域的实际效果。
+
 ### 2.2 商业价值分析
 
 基于对100家应用企业的调研数据，${topic.category}技术主要带来了以下商业价值：
@@ -420,6 +517,8 @@ ${topic.xiaohongshuTags.join(' ')}
 
 **机构投资者**：可配置一定比例的行业ETF，分享行业整体增长红利
 
+> 🎯 **共鸣时刻**："投资${topic.category}领域，本质上是投资未来十年的技术红利。但真正的分水岭不是技术本身，而是谁能先看到趋势并付诸行动。" —— 这句话，适合截图发朋友圈，懂的人自然懂。
+
 ## 五、发展挑战与应对策略
 
 ### 5.1 主要挑战
@@ -453,6 +552,8 @@ ${topic.category}作为当今最具发展潜力的技术领域之一，正在深
 展望未来，随着技术的不断成熟和应用的深入，${topic.category}将在推动产业升级、促进经济增长、改善社会生活等方面发挥越来越重要的作用。对于企业和个人而言，抓住这一历史性机遇，积极布局相关领域，将是在数字时代赢得竞争优势的关键所在。
 
 然而，我们也要清醒认识到，技术的发展和应用并非一帆风顺，仍面临诸多挑战和不确定性。需要各方共同努力，在技术创新、产业协同、政策支持、人才培养等方面形成合力，才能推动${topic.category}领域持续健康发展。
+
+> 💬 **话题讨论**：有人说${topic.category}会改变世界，也有人担心它带来不确定性。你怎么看？这个话题丢到群里，能聊半小时。顺手转给同事，看看他们怎么说。
 
 **作者**：科技趋势分析师
 **原创声明**：本文为深度原创分析报告，基于${this.today}最新的行业数据和专业研究。
