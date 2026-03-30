@@ -22,9 +22,20 @@ Thumbs.db
 *.swp
 *.swo
 
-# Environment
+# Environment（敏感配置，不提交）
 .env
 .env.local
+.env.production
+
+# 用户私有配置（含API Key占位符，安全起见不提交）
+config/user-config.json
+
+# 运行时数据
+automation_logs.json
+pipeline_execution.json
+today_article.json
+daily_execution_report_*.md
+review_history.json
 
 # Coverage
 coverage/

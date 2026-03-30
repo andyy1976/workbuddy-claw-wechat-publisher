@@ -3,6 +3,10 @@
  * 支持 lvbo_article 和 lvbo_type 表
  */
 
+// 加载 .env 环境变量
+const { loadEnv } = require('./env-loader.cjs');
+loadEnv();
+
 let mysqlBase;
 try {
     // 先尝试本地安装
@@ -19,14 +23,14 @@ try {
     }
 }
 
-// ── 数据库配置 ──────────────────────────────────────────────
+// ── 数据库配置（从环境变量读取）──────────────────────────────
 const dbConfig = {
-    host: 'localhost',
-    port: 3306,
-    database: 'eastaiai',
-    user: 'root',
-    password: 'gyc1234567',
-    charset: 'utf8mb4'
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT) || 3306,
+    database: process.env.DB_NAME || 'eastaiai',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    charset: process.env.DB_CHARSET || 'utf8mb4'
 };
 
 // ── 创建数据库连接 ─────────────────────────────────────────
