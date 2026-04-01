@@ -25,6 +25,9 @@ const webAccess = new WebAccess({
   jinaApiKey: process.env.JINA_API_KEY
 });
 
+// ── 加载短视频生成能力 ───────────────────────────────────
+const ShortVideoGenerator = require('C:/Users/tuan_/.openclaw/skills/short-video-generator/main.js');
+
 // 基础目录 = 项目根目录（scripts 的上级目录）
 const baseDir = path.resolve(__dirname, '..');
 
@@ -764,6 +767,28 @@ async function run(mode) {
             
             // 转换为微信 HTML
             contentHtml = markdownToWeChatHtml(articleContent);
+            
+            // 生成短视频脚本
+            console.log('🎬 生成短视频脚本...');
+            try {
+              const videoResult = await ShortVideoGenerator.main({
+                content: articleContent,
+                platform: 'douyin',
+                duration: 30,
+                count: 2,
+                outputDir: path.join(baseDir, 'output/videos')
+              });
+              
+              if (videoResult.success) {
+                console.log(`✅ 成功生成${videoResult.scripts.length}个短视频脚本`);
+                videoResult.scripts.forEach((script, i) => {
+                  console.log(`   脚本${i+1}标题：${script.title}`);
+                });
+                console.log(`   脚本已保存到：${videoResult.scriptFile}`);
+              }
+            } catch (e) {
+              console.log(`⚠️  短视频脚本生成失败: ${e.message}`);
+            }
         } catch (e) {
             console.error('❌ AI 生成失败:', e.message);
             console.log('⚠️  回退到模板生成...\n');
