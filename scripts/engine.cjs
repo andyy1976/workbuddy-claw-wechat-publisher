@@ -18,15 +18,28 @@ const path = require('path');
 const cmsStorage = require('./cms-database.cjs');
 
 // ── 加载 Web Access 能力 ─────────────────────────────────
-const WebAccess = require('C:/Users/tuan_/.openclaw/skills/web-access-wrapper.js');
-const webAccess = new WebAccess({
-  headless: true,
-  useJina: false,
-  jinaApiKey: process.env.JINA_API_KEY
-});
+let WebAccess = null;
+let webAccess = null;
+try {
+    WebAccess = require(path.join(baseDir, 'src', 'web-access-wrapper.js'));
+    webAccess = new WebAccess({
+        headless: true,
+        useJina: false,
+        jinaApiKey: process.env.JINA_API_KEY
+    });
+    console.log('✅ WebAccess模块加载成功');
+} catch (e) {
+    console.warn('⚠️  WebAccess模块未找到，将禁用热点搜索和内容抓取功能');
+}
 
 // ── 加载短视频生成能力 ───────────────────────────────────
-const ShortVideoGenerator = require('C:/Users/tuan_/.openclaw/skills/short-video-generator/main.js');
+let ShortVideoGenerator = null;
+try {
+    ShortVideoGenerator = require(path.join(baseDir, 'src', 'short-video-generator', 'main.js'));
+    console.log('✅ 短视频生成模块加载成功');
+} catch (e) {
+    console.warn('⚠️  短视频生成模块未找到，将禁用短视频脚本生成功能');
+}
 
 // 基础目录 = 项目根目录（scripts 的上级目录）
 const baseDir = path.resolve(__dirname, '..');
@@ -58,6 +71,47 @@ try {
 }
 
 const { wechat, keywords, publish, ai, tags } = config;
+
+// ── 配置校验 ──────────────────────────────────────────────
+function validateConfig() {
+    const required = [
+        'wechat.appId',
+        'wechat.appSecret'
+    ];
+    const missing = [];
+    required.forEach(field => {
+        const [obj, key] = field.split('.');
+        if (!config[obj] || !config[obj][key]) {
+            missing.push(field);
+        }
+    });
+    if (missing.length > 0) {
+        console.error('❌ 配置文件缺少必填字段:', missing.join(', '));
+        console.error('请运行 node index.js --setup 完成配置');
+        process.exit(1);
+    }
+    console.log('✅ 配置校验通过');
+}
+
+// ── 日志持久化 ─────────────────────────────────────────────
+const logDir = path.join(baseDir, 'logs');
+if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+const logFile = path.join(logDir, `run-${new Date().toISOString().split('T')[0]}.log`);
+const originalLog = console.log;
+const originalError = console.error;
+console.log = (...args) => {
+    originalLog.apply(console, args);
+    fs.appendFileSync(logFile, `[${new Date().toLocaleString()}] INFO: ${args.join(' ')}
+`, 'utf8');
+};
+console.error = (...args) => {
+    originalError.apply(console, args);
+    fs.appendFileSync(logFile, `[${new Date().toLocaleString()}] ERROR: ${args.join(' ')}
+`, 'utf8');
+};
+
+// 执行配置校验
+validateConfig();
 
 // ── 环境变量覆盖敏感配置 ──────────────────────────────────
 if (process.env.WECHAT_APP_ID) wechat.appId = process.env.WECHAT_APP_ID;
