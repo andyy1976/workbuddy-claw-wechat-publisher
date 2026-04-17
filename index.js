@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * WorkBuddy Claw 微信公众号发布器
+ * WorkBuddy Claw 微信公众号发布器 v2.0
+ * 
+ * 集成数字生命卡兹克（Khazix）独家写作风格
+ * 热点抓取 + 卡兹克风格AI写作 + 一键发布
  * 
  * 支持两种安装方式：
  * 1. npm install workbuddy-claw-wechat-publisher
@@ -9,7 +12,7 @@
  * 
  * 使用方法：
  *   node index.js --hotspot     查看今日热点
- *   node index.js --publish    抓热点→写文章→发布
+ *   node index.js --publish    抓热点→卡兹克风格写文章→发布
  *   node index.js --validate   验证配置
  *   node index.js --diary "标题" "正文"  发布自定义文章
  * 
@@ -42,16 +45,19 @@ function loadConfig() {
 // 主入口
 const args = process.argv.slice(2);
 const command = args[0];
+const arg1 = args[1];
+const arg2 = args[2];
 
 async function main() {
-    console.log('\n📡 WorkBuddy 微信发布器 v1.1.0\n');
+    console.log('\n📡 WorkBuddy 微信发布器 v2.0 (Khazix Writer Integrated + 增强发布)\n');
     
     if (!command) {
         console.log('用法:');
-        console.log('  node index.js --hotspot    查看今日热点');
-        console.log('  node index.js --publish    抓热点→写文章→发布');
-        console.log('  node index.js --validate   验证配置');
+        console.log('  node index.js --hotspot        查看今日热点');
+        console.log('  node index.js --publish        抓热点→卡兹克风格写文章→发布');
+        console.log('  node index.js --validate       验证公众号配置');
         console.log('  node index.js --diary "标题" "正文"  发布自定义文章');
+        console.log('  node index.js --enhanced <file> [title]  使用增强版系统发布markdown文件（自动生成封面+配图）');
         console.log('\n或安装为全局命令: npm link');
         return;
     }
@@ -73,7 +79,7 @@ async function main() {
             break;
             
         case '--publish':
-            console.log('🚀 开始发布流程...\n');
+            console.log('🚀 开始自动发布流程...\n');
             await engine('');
             break;
             
@@ -83,14 +89,25 @@ async function main() {
             break;
             
         case '--diary':
-            const title = args[1];
-            const body = args[2];
+            const title = arg1;
+            const body = arg2;
             if (!title || !body) {
                 console.error('用法: node index.js --diary "标题" "正文"');
                 process.exit(1);
             }
             console.log(`📝 发布日记: ${title}\n`);
             await engine(`--diary "${title}" "${body}"`);
+            break;
+            
+        case '--enhanced':
+            const file = arg1;
+            const enhancedTitle = arg2;
+            if (!file) {
+                console.error('用法: node index.js --enhanced <markdown-file> [title]');
+                process.exit(1);
+            }
+            console.log(`🚀 增强发布: ${file}\n`);
+            await engine.publishEnhanced(file, enhancedTitle);
             break;
             
         default:

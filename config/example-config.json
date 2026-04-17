@@ -38,8 +38,14 @@
   "publish": {
     "targetTime": "07:00",
     "minHeat": 50000,
-    "contentStyle": "深度分析型",
-    "minWords": 1200,
-    "maxWords": 2000
+    "contentStyle": "khazix",
+    "styleOptions": {
+      "enableKhazixRules": true,
+      "minWords": 3000,
+      "maxWords": 5000,
+      "addKhazixFooter": true
+    },
+    "minWords": 3000,
+    "maxWords": 5000
   }
 }

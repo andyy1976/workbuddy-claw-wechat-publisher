@@ -1,7 +1,7 @@
 {
   "name": "workbuddy-claw-wechat-publisher",
-  "version": "1.2.0",
-  "description": "微信公众号智能发布器 - 热点抓取 + AI写作 + 一键发布",
+  "version": "3.0.0",
+  "description": "微信公众号智能发布器 v3 - 热点抓取 + 卡兹克风格AI写作 + 增强版自动封面配图 + 一键发布（全整合版）",
   "main": "index.js",
   "bin": {
     "wechat-publisher": "./index.js"
@@ -18,9 +18,12 @@
     "wechat",
     "公众号",
     "AI写作",
-    "自动化",
+    "automation",
     "openclaw",
-    "workbuddy"
+    "workbuddy",
+    "khazix",
+    "markdown",
+    "publish"
   ],
   "author": "超云艾艾",
   "license": "MIT",

@@ -1,0 +1,5 @@
+# 增强版公众号发布系统 Python 依赖
+# 安装: pip install -r requirements.txt
+
+requests>=2.31.0
+Pillow>=10.0.0

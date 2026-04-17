@@ -1,12 +1,24 @@
 /**
- * 智能双文章生成器 v1.0
+ * 智能双文章生成器 v1.1
  * 每次选择一个最热门主题，同时生成小红书和公众号两篇文章
  * 都发布到公众号草稿箱
+ * 
+ * === KHAZIX-WRITER 代码集成 ===
+ * 集成 khazix-writer 卡兹克公众号长文写作技能
+ * 配置 publish.contentStyle = 'khazix' 即可启用卡兹克文风
+ * 技能路径：C:\Users\tuan_\.openclaw\skills\khazix-writer\SKILL.md
  */
 
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
+
+// Khazix Writer 静态文风规则 - 从已安装技能自动加载
+const KHAZIX_CONFIG = {
+    skillPath: 'C:/Users/tuan_/.openclaw/skills/khazix-writer/SKILL.md',
+    styleFlag: 'khazix',
+    slogan: '有见识的普通人在认真聊一件打动他的事'
+};
 
 class DualArticleGenerator {
     constructor() {
