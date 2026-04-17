@@ -37,7 +37,7 @@ function loadConfig() {
     try {
         return JSON.parse(fs.readFileSync(examplePath, 'utf8'));
     } catch (e) {
-        console.error('❌ 找不到配置文件，请先运行 npm run setup 或 /wx-setup');
+        console.error('❌ 找不到配置文件，请先运行 node index.js --setup 完成初始化');
         process.exit(1);
     }
 }
