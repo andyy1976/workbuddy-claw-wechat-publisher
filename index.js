@@ -37,7 +37,7 @@ function loadConfig() {
     try {
         return JSON.parse(fs.readFileSync(examplePath, 'utf8'));
     } catch (e) {
-        console.error('❌ 找不到配置文件，请先运行 npm run setup 或 /wx-setup');
+        console.error('❌ 找不到配置文件，请先运行 node index.js --setup 完成初始化');
         process.exit(1);
     }
 }
@@ -109,6 +109,7 @@ async function main() {
             console.log(`🚀 增强发布: ${file}\n`);
             await engine.publishEnhanced(file, enhancedTitle);
             break;
+<<<<<<< HEAD
 
         case '--v4':
             // 增强版引擎 v4：真正抓取热点 + 深度搜索 + 卡兹克写作
@@ -123,6 +124,8 @@ async function main() {
             proc.on('close', code => process.exit(code || 0));
             proc.on('error', err => { console.error(err.message); process.exit(1); });
             return;
+=======
+>>>>>>> 94aacffdf057ce974a46666170b0801bd771e82a
             
         default:
             console.error('未知命令:', command);
