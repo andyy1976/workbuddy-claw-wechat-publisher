@@ -1,0 +1,72 @@
+{
+  "bomMeta": {
+    "bomId": "BOM-ISC2000-001",
+    "productId": "PROD-001",
+    "productName": "智能工业传感器ISC-2000",
+    "version": "1.0",
+    "generatedAt": "2026-04-29T15:30:00+08:00",
+    "generatedBy": "sme-content-employee",
+    "forCompany": "中小企业示例公司"
+  },
+  "materials": [
+    {
+      "seq": 1,
+      "materialCode": "MAT-001",
+      "materialName": "压力敏感芯片",
+      "spec": "量程0-100MPa，精度±0.1%",
+      "unit": "个",
+      "quantity": 1,
+      "supplier": "芯感科技",
+      "unitPrice": 85.00,
+      "totalPrice": 85.00,
+      "leadTime": "7天",
+      "isCritical": true,
+      "notes": "核心元件，需原厂质保"
+    },
+    {
+      "seq": 2,
+      "materialCode": "MAT-002",
+      "materialName": "信号放大电路",
+      "spec": "4-20mA输出，含PCB",
+      "unit": "套",
+      "quantity": 1,
+      "supplier": "华强电子",
+      "unitPrice": 42.50,
+      "totalPrice": 42.50,
+      "leadTime": "3天",
+      "isCritical": false,
+      "notes": "标准品，可替代"
+    },
+    {
+      "seq": 3,
+      "materialCode": "MAT-003",
+      "materialName": "防护外壳",
+      "spec": "IP67铝合金，定制尺寸",
+      "unit": "个",
+      "quantity": 1,
+      "supplier": "精密压铸厂",
+      "unitPrice": 68.00,
+      "totalPrice": 68.00,
+      "leadTime": "10天",
+      "isCritical": false,
+      "notes": "开模费另计，批量可免"
+    }
+  ],
+  "summary": {
+    "totalMaterials": 3,
+    "totalQuantity": 3,
+    "totalCost": 195.50,
+    "criticalMaterialCount": 1,
+    "estimatedAssemblyTime": "2小时/台"
+  },
+  "alternativeParts": [
+    {
+      "originalCode": "MAT-001",
+      "alternativeCode": "MAT-001A",
+      "diff": "精度±0.05%，支持HART协议",
+      "priceDiff": "+35.00",
+      "notes": "高端场景选用"
+    }
+  ],
+  "notes": "本BOM适用于小批量生产（<100台），批量采购可享9折优惠"
+}
