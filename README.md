@@ -1,25 +1,29 @@
-# WorkBuddy 微信公众号发布器 v3.0
+# 中小企业内容数字员工（原微信发布插件升级版）
 
-> 热点采集 → 卡兹克风格AI写作 → 格式优化 → 自动生成封面配图 → 一键发布草稿箱
+> 产品数据采集 → BOM自动生成 → 多平台内容创作 → 一键发布（微信/小红书/抖音/智能体社区）
 
-**完整整合增强版发布系统**：
-- 原生支持热点抓取（微博/知乎/B站/小红书）
-- 集成「数字生命卡兹克」独家写作风格，产出像真人一样有温度有洞见的公众号长文
-- 增强版支持：自动分类标签、内容质量优化、自动生成封面图和内容配图、SEO优化
-- 全流程自动化：从markdown直接发布到公众号草稿箱
+**核心功能**：
+1. **产品数据自动化**：从产品平台采集数据，生成结构化BOM清单（物料成本、供应商、交期）
+2. **智能内容创作**：生成适配各平台的产品宣传文章、短视频脚本，复用原有卡兹克写作风格
+3. **多平台一键发布**：支持微信/小红书/抖音/智能体社区，参考郭震小红书Skill实测案例，修复页面元素点击问题
+4. **保留原有能力**：热点抓取、卡兹克风格写作、公众号自动发布、封面配图生成
+
+**定位**：专为中小企业打造的内容生产+发布全流程工具，每天任务直接在本目录（`D:\.qclaw\workspace\wechat-publisher-plugin`）运行，无需迁移
 
 ---
 
 ## 这是什么？
 
-一个可以帮你**自动生产微信公众号文章**的工具，集成了数字生命卡兹克独家写作风格。
+原为微信公众号自动发布工具，现升级为**中小企业内容数字员工**，集成了：
+- 产品数据管理（采集+BOM生成）
+- 多平台内容创作（文章/视频脚本）
+- 一键多平台发布（微信/小红书/抖音/智能体社区）
+- 保留原有公众号自动生产能力（热点抓取、卡兹克风格写作）
 
-你只需要告诉它你关注哪些领域（关键词白名单），它每天帮你：
-
-1. 自动抓取微博/知乎/B站/小红书热点
-2. 按你的关键词过滤，找最匹配的热点
-3. 用卡兹克风格生成一篇3000-5000字的高质量深度文章
-4. 直接发布到你的公众号草稿箱
+**中小企业核心价值**：
+1. 降本：替代人工整理BOM、写宣传内容、多平台发布
+2. 提效：产品数据→BOM→内容→发布全流程自动化
+3. 实用：所有功能在原目录运行，无需学习新工具，每天任务直接执行
 
 **卡兹克风格特点**：「有见识的普通人在认真聊一件打动他的事」，讲人话、有温度、有洞见、不端着，完全摆脱AI味儿。
 
@@ -27,15 +31,18 @@
 
 **适合谁用？**
 
-- 公众号运营者：每天省去选题和排版时间
-- 企业新媒体团队：统一风格，批量生产
-- 个人创作者/成长日记：追热点或日更，自动化解放双手
+- 中小企业主：快速生成产品宣传内容，一键分发多平台
+- 产品经理：自动整理BOM清单，同步生成宣传素材
+- 运营团队：多平台内容统一生产，减少重复劳动
+- 原公众号运营者：保留原有热点写作能力，新增多平台发布
 
 ---
 
-## 安装方式
+## 安装方式（已内置依赖，无需额外安装）
 
-> ⚠️ **前置要求**：请确保已安装 [Node.js](https://nodejs.org/) (v14+) 和 Python 3 + pip
+> ✅ **前置要求**：已安装 Node.js (v14+) 和 Python 3 + pip，原插件`package.json`已包含所需依赖（playwright、axios、mysql2等）
+
+> 📌 **重要**：所有功能直接在原始目录运行，无需迁移：`D:\.qclaw\workspace\wechat-publisher-plugin`
 
 ---
 
@@ -145,17 +152,32 @@ node index.js --help
 
 ---
 
-## 快速开始
+## 快速开始（新增功能）
+
+### 0. 产品数据与BOM生成（新功能）
+```bash
+# 1. 配置产品平台API（需用户提供）
+# 编辑 config/user-config.json，添加productPlatform字段
+
+# 2. 采集产品数据
+node scripts/collect-product-data.js [productId]  # 不指定则采集全部
+
+# 3. 生成BOM清单
+node scripts/generate-bom.js [productId] [format]  # format: json/markdown
+```
 
 ### 1. 初始化配置
 
 ```bash
-# 命令行初始化
+# 命令行初始化（保留原有公众号配置）
 node index.js --setup
 
 # 或手动复制配置模板
 cp config/example-config.json config/user-config.json
-# 然后编辑 user-config.json 填入你的公众号信息
+# 然后编辑 user-config.json 填入：
+# - 公众号信息（原有）
+# - 产品平台API（新增，需用户提供）
+# - 各平台发布接口（新增，需用户提供）
 ```
 
 **配置说明：**
@@ -191,10 +213,19 @@ cp config/example-config.json config/user-config.json
 node index.js --hotspot
 ```
 
-### 3. 自动抓热点写文章发布（卡兹克风格）
+### 3. 自动抓热点写文章发布（卡兹克风格，保留原有）
 
 ```bash
 node index.js --publish
+```
+
+### 4. 小红书发布（新功能，参考郭震实测案例）
+```bash
+# 检查登录状态（首次需扫码）
+node scripts/check-xiaohongshu-login.js
+
+# 发布内容（需先执行content-create生成内容）
+node scripts/publish-xiaohongshu.js [contentId]
 ```
 
 ### 4. 增强发布 - 发布你写好的markdown文章（自动生成封面+配图）
@@ -231,6 +262,7 @@ node index.js --enhanced article.md "我的文章标题"
 
 ## 命令一览
 
+### 原有公众号功能
 | 命令 | 说明 |
 |------|------|
 | `--hotspot` | 查看今日热点 |
@@ -238,8 +270,15 @@ node index.js --enhanced article.md "我的文章标题"
 | `--enhanced <file> [title]` | 增强发布：markdown文件→自动生成封面配图→发布 |
 | `--validate` | 验证公众号配置 |
 | `--diary "标题" "正文"` | 发布自定义文章 |
-| `--setup` | 初始化配置 |
-| `--help` | 显示帮助 |
+
+### 新增中小企业功能
+| 脚本 | 说明 |
+|------|------|
+| `node scripts/collect-product-data.js [productId]` | 采集产品平台数据 |
+| `node scripts/generate-bom.js [productId] [format]` | 生成BOM清单（json/markdown） |
+| `node scripts/check-xiaohongshu-login.js` | 检查小红书登录状态 |
+| `node scripts/publish-xiaohongshu.js [contentId]` | 小红书图文预填发布 |
+| `node commands/content-create.md` | 生成多平台宣传内容 |
 
 ---
 
@@ -280,6 +319,14 @@ node index.js --enhanced article.md "我的文章标题"
 ---
 
 ## 更新日志
+
+### v4.0.0 (2026-05-01) - 中小企业内容数字员工升级
+- ✨ 新增产品数据采集功能（`scripts/collect-product-data.js`）
+- ✨ 新增BOM自动生成功能（`scripts/generate-bom.js`）
+- ✨ 新增多平台发布支持：小红书/抖音/智能体社区
+- ✨ 参考郭震小红书Skill案例，修复页面元素点击问题（透明Tab/z-index过滤）
+- ✨ 新增内容创作命令（`commands/content-create.md`）
+- 📌 所有功能保留在原目录运行，不迁移
 
 ### v3.0.0 (2026-04-10)
 - ✨ 完整整合增强版发布系统：自动生成封面图 + 内容配图，全流程一步到位
