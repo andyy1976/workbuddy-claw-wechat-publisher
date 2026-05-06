@@ -1,0 +1,98 @@
+{
+  "providers": [
+    {
+      "name": "deepseek",
+      "enabled": true,
+      "baseUrl": "https://api.deepseek.com",
+      "apiKey": "sk-be1babe391c7428a80eca2b832c44cc2",
+      "models": ["deepseek-v4-flash", "deepseek-v4-pro"],
+      "priority": 1,
+      "note": "DeepSeek v4-flash 便宜(¥0.1/M), v4-pro 贵(¥1/M)"
+    },
+    {
+      "name": "astron",
+      "enabled": true,
+      "baseUrl": "https://maas-coding-api.cn-huabei-1.xf-yun.com/v2",
+      "apiKey": "MDlkZDI1YTU0ZTkyZDMyOTllOWMwMzQ5",
+      "models": ["astron-code-latest"],
+      "priority": 2,
+      "headers": {
+        "Authorization": "Bearer 0508e2d155d689743f9fef6e9fd20400:MDlkZDI1YTU0ZTkyZDMyOTllOWMwMzQ5"
+      },
+      "note": "讯飞Astron代码模型"
+    },
+    {
+      "name": "anonymous-lumen",
+      "enabled": true,
+      "baseUrl": "http://127.0.0.1:19000/proxy/llm",
+      "apiKey": "${QCLAW_LLM_API_KEY}",
+      "models": ["anonymous/lumen"],
+      "priority": 3,
+      "note": "匿名模型 lumen (通过本地代理)"
+    },
+    {
+      "name": "anonymous-ebullient",
+      "enabled": true,
+      "baseUrl": "http://127.0.0.1:19000/proxy/llm",
+      "apiKey": "${QCLAW_LLM_API_KEY}",
+      "models": ["anonymous/ebullient"],
+      "priority": 4,
+      "note": "匿名模型 ebullient"
+    },
+    {
+      "name": "anonymous-elm",
+      "enabled": true,
+      "baseUrl": "http://127.0.0.1:19000/proxy/llm",
+      "apiKey": "${QCLAW_LLM_API_KEY}",
+      "models": ["anonymous/elm"],
+      "priority": 5,
+      "note": "匿名模型 elm (支持图文)"
+    },
+    {
+      "name": "anonymous-maple",
+      "enabled": true,
+      "baseUrl": "http://127.0.0.1:19000/proxy/llm",
+      "apiKey": "${QCLAW_LLM_API_KEY}",
+      "models": ["anonymous/maple"],
+      "priority": 6,
+      "note": "匿名模型 maple"
+    },
+    {
+      "name": "anonymous-petrichor",
+      "enabled": true,
+      "baseUrl": "http://127.0.0.1:19000/proxy/llm",
+      "apiKey": "${QCLAW_LLM_API_KEY}",
+      "models": ["anonymous/petrichor"],
+      "priority": 7,
+      "note": "匿名模型 petrichor"
+    },
+    {
+      "name": "anonymous-poplar",
+      "enabled": true,
+      "baseUrl": "http://127.0.0.1:19000/proxy/llm",
+      "apiKey": "${QCLAW_LLM_API_KEY}",
+      "models": ["anonymous/poplar"],
+      "priority": 8,
+      "note": "匿名模型 poplar"
+    },
+    {
+      "name": "anonymous-sonder",
+      "enabled": true,
+      "baseUrl": "http://127.0.0.1:19000/proxy/llm",
+      "apiKey": "${QCLAW_LLM_API_KEY}",
+      "models": ["anonymous/sonder"],
+      "priority": 9,
+      "note": "匿名模型 sonder"
+    }
+  ],
+  "fallbackStrategy": "priority",
+  "retryOnErrors": ["balance", "insufficient", "quota", "limit", "rate", "timeout"],
+  "maxRetries": 3,
+  "_help": {
+    "说明": "AI 模型多路容错配置",
+    "添加模型": "复制一个 provider 块，修改 name/baseUrl/apiKey/models",
+    "禁用模型": "设置 enabled: false",
+    "优先级": "priority 越小越优先，失败自动切换下一个",
+    "环境变量": "支持 ${VAR_NAME} 格式，会自动替换"
+  }
+}

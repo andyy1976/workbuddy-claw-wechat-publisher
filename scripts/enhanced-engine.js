@@ -38,7 +38,40 @@ const { saveArticle } = require('./cms-database.cjs');
 // ── 常量 ──────────────────────────────────────────────────
 const AI_API_KEY = ai.apiKey || 'sk-be1babe391c7428a80eca2b832c44cc2';
 const AI_BASE_URL = ai.baseUrl || 'https://api.deepseek.com';
-const AI_MODEL = 'deepseek-chat';
+const AI_MODEL = 'deepseek-v4-flash';
+
+// ── AI 多模型配置（从配置文件读取）──────────────────────────
+const AI_PROVIDERS_CONFIG_PATH = path.join(BASE_DIR, 'config', 'ai-providers.json');
+
+function loadAIProviders() {
+    try {
+        const configContent = fs.readFileSync(AI_PROVIDERS_CONFIG_PATH, 'utf8');
+        const config = JSON.parse(configContent);
+        
+        // 替换环境变量
+        const providers = config.providers
+            .filter(p => p.enabled !== false)
+            .map(p => ({
+                ...p,
+                apiKey: p.apiKey.replace(/\$\{([^}]+)\}/g, (_, varName) => process.env[varName] || '')
+            }))
+            .sort((a, b) => (a.priority || 99) - (b.priority || 99));
+        
+        console.log(`📦 加载 AI 提供者: ${providers.map(p => p.name).join(', ')}`);
+        return providers;
+    } catch (e) {
+        console.error('❌ 无法加载 ai-providers.json，使用默认配置');
+        return [{
+            name: 'deepseek',
+            baseUrl: 'https://api.deepseek.com',
+            apiKey: AI_API_KEY,
+            models: ['deepseek-v4-flash']
+        }];
+    }
+}
+
+const AI_PROVIDERS = loadAIProviders();
+let currentProviderIndex = 0;
 
 // ── 网络请求（只访问确认可用的域名）────────────────────────
 function httpGet(url, timeout = 15000) {
@@ -67,27 +100,74 @@ function httpGet(url, timeout = 15000) {
     });
 }
 
-// ── AI 调用 ──────────────────────────────────────────────
+// ── AI 调用（多模型容错） ──────────────────────────────────
 async function callAI(prompt, systemPrompt = '', maxTokens = 6000, temperature = 0.7) {
     const messages = [];
     if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
     messages.push({ role: 'user', content: prompt });
 
-    const resp = await fetch(`${AI_BASE_URL}/v1/chat/completions`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${AI_API_KEY}`
-        },
-        body: JSON.stringify({ model: AI_MODEL, messages, temperature, max_tokens: maxTokens })
-    });
+    for (let i = 0; i < AI_PROVIDERS.length; i++) {
+        const providerIndex = (currentProviderIndex + i) % AI_PROVIDERS.length;
+        const provider = AI_PROVIDERS[providerIndex];
 
-    const data = await resp.json();
-    if (data.choices && data.choices[0]) return data.choices[0].message.content;
-    if (data.error) throw new Error(`AI错误: ${data.error.message || JSON.stringify(data.error)}`);
-    throw new Error(`AI异常: ${JSON.stringify(data)}`);
+        if (!provider.apiKey || provider.apiKey === '') continue;
+
+        console.log(`🤖 尝试 ${provider.name} (${provider.models[0]})...`);
+
+        try {
+            // 构建请求头（支持自定义 headers）
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${provider.apiKey}`
+            };
+            if (provider.headers) {
+                Object.assign(headers, provider.headers);
+            }
+            
+            const resp = await fetch(`${provider.baseUrl}/chat/completions`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    model: provider.models[0],
+                    messages,
+                    temperature,
+                    max_tokens: maxTokens
+                })
+            });
+
+            const data = await resp.json();
+
+            if (data.choices && data.choices[0]) {
+                console.log(`✅ ${provider.name} 成功`);
+                currentProviderIndex = providerIndex;
+                return data.choices[0].message.content;
+            }
+
+            if (data.error) {
+                const errorMsg = data.error.message || 'Unknown error';
+                console.log(`❌ ${provider.name} 失败：${errorMsg}`);
+
+                if (errorMsg.includes('balance') || errorMsg.includes('insufficient') || errorMsg.includes('欠费') || errorMsg.includes('quota') || errorMsg.includes('limit')) {
+                    console.log(`💰 ${provider.name} 余额不足，尝试下一个模型...`);
+                    continue;
+                }
+
+                if (resp.status >= 500) {
+                    console.log(`⚠️  ${provider.name} 服务端错误，尝试下一个...`);
+                    continue;
+                }
+
+                throw new Error(`AI 错误 (${provider.name}): ${errorMsg}`);
+            }
+
+            throw new Error(`AI 异常 (${provider.name}): ${JSON.stringify(data)}`);
+
+        } catch (e) {
+            console.log(`⚠️  ${provider.name} 调用失败：${e.message}`);
+            if (i === AI_PROVIDERS.length - 1) throw e;
+        }
+    }
 }
-
 // ── 获取 HN 信号 ─────────────────────────────────────────
 async function fetchHNSignals() {
     const queries = [
@@ -250,12 +330,14 @@ ${(topicInfo.keyPoints || []).map(p => '• ' + p).join('\n')}
 ## 字数
 **4000-5500字。** 不要少于4000字。
 
-## 固定结尾（必须附在文末）
----
+## 固定结尾（必须附在文末，仅输出一次）
+在文章正文结束后，用分割线 --- 分隔，然后写以下固定结尾：
+
 以上，既然看到这里了，如果觉得不错，随手点个赞、在看、转发三连吧，如果想第一时间收到推送，也可以给我个星标⭐～
 
 谢谢你看我的文章，下次再见。
 
+注意：结尾只能出现一次，不要重复。
 直接输出文章正文，不要输出任何说明或元数据。
 `;
 }
@@ -283,7 +365,20 @@ async function writeArticle(topicInfo) {
 }
 
 // ── Markdown → 微信HTML ─────────────────────────────────
+function dedupTail(text) {
+    // 去除AI可能生成的重复固定结尾（结尾特征：包含"以上，既然看到这里了"）
+    const tailMarker = '以上，既然看到这里了';
+    const firstIdx = text.lastIndexOf(tailMarker);
+    const secondIdx = text.indexOf(tailMarker);
+    if (firstIdx !== secondIdx && firstIdx > secondIdx) {
+        // 出现两次以上，只保留第一次出现的完整结尾段
+        return text.substring(0, firstIdx).trimEnd();
+    }
+    return text;
+}
+
 function mdToHtml(md) {
+    md = dedupTail(md);
     let html = `<section style="font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;max-width:680px;margin:0 auto;color:#1e293b;padding:20px;">`;
 
     const lines = md
@@ -326,10 +421,8 @@ function mdToHtml(md) {
         i++;
     }
 
-    html += `<p style="margin-top:32px;padding-top:20px;border-top:1px dashed #d1d5db;font-size:14px;color:#6b7280;line-height:1.8;">
-以上，既然看到这里了，如果觉得不错，随手点个赞、在看、转发三连吧，如果想第一时间收到推送，也可以给我个星标⭐～<br><br>
-谢谢你看我的文章，下次再见。
-</p></section>`;
+    // 结尾由 AI 在正文中生成，此处不再重复追加
+    html += '</section>';
 
     return html;
 }
@@ -354,6 +447,70 @@ async function publishWechat(title, digest, contentHtml) {
             digest: digest.slice(0, 120),
             content: contentHtml,
             thumb_media_id: wechat.thumbMediaId,
+            show_cover_pic: 1,
+            need_open_comment: 1,
+            only_fans_can_comment: 0
+        }]
+    });
+
+    const resp = await fetch(pubUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+    return await resp.json();
+}
+
+// ── 上传图片到微信（永久素材）───────────────────────────────
+async function uploadWechatImage(filePath, type = 'image') {
+    const tokenUrl = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${wechat.appId}&secret=${wechat.appSecret}`;
+    let token;
+    try {
+        const tResp = await httpGet(tokenUrl, 10000);
+        if (!tResp.access_token) throw new Error(JSON.stringify(tResp));
+        token = tResp.access_token;
+    } catch (e) {
+        throw new Error('微信Token获取失败: ' + e.message);
+    }
+
+    // 使用 axios 上传
+    const axios = require('axios');
+    const FormData = require('form-data');
+    const form = new FormData();
+    form.append('media', fs.createReadStream(filePath), path.basename(filePath));
+
+    const uploadUrl = `https://api.weixin.qq.com/cgi-bin/material/add_material?access_token=${token}&type=${type}`;
+    
+    try {
+        const resp = await axios.post(uploadUrl, form, {
+            headers: form.getHeaders(),
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity
+        });
+        console.log('   微信上传响应:', JSON.stringify(resp.data));
+        return resp.data;
+    } catch (e) {
+        console.log('   微信上传错误:', e.message);
+        throw e;
+    }
+}
+
+// ── 发布微信（带自定义缩略图）──────────────────────────────
+async function publishWechatWithThumb(title, digest, contentHtml, thumbMediaId) {
+    const tokenUrl = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${wechat.appId}&secret=${wechat.appSecret}`;
+    let token;
+    try {
+        const tResp = await httpGet(tokenUrl, 10000);
+        if (!tResp.access_token) throw new Error(JSON.stringify(tResp));
+        token = tResp.access_token;
+    } catch (e) {
+        throw new Error('微信Token获取失败: ' + e.message);
+    }
+
+    const pubUrl = `https://api.weixin.qq.com/cgi-bin/draft/add?access_token=${token}`;
+    const body = JSON.stringify({
+        articles: [{
+            title,
+            author: wechat.author || '超云艾艾',
+            digest: digest.slice(0, 120),
+            content: contentHtml,
+            thumb_media_id: thumbMediaId,
             show_cover_pic: 1,
             need_open_comment: 1,
             only_fans_can_comment: 0
@@ -411,12 +568,53 @@ async function main() {
     // 5. 格式转换
     console.log('📄 转换格式...');
     const contentHtml = mdToHtml(article);
-    const digest = article.replace(/[#*「」『』\n\s]/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, 120) + '...';
+    
+    // 生成 AI 摘要（200字内）
+    console.log('\n📝 生成摘要...');
+    const enhancer = require('./article-enhancer');
+    const digest = await enhancer.generateSummary(title, article);
+    console.log(`✅ 摘要: ${digest.substring(0, 60)}...`);
+    
+    // 匹配缩略图
+    const thumbnail = await enhancer.matchThumbnail(title, digest);
+    const thumbnailPath = path.join(BASE_DIR, 'output', `thumb_${Date.now()}.jpg`);
+    let thumbMediaId = wechat.thumbMediaId; // 默认使用配置的缩略图
+    let finalContentHtml = contentHtml;
+    let useCustomThumb = false;
+    
+    if (thumbnail.url) {
+        try {
+            await enhancer.downloadImage(thumbnail.url, thumbnailPath);
+            console.log(`📷 缩略图已保存: ${thumbnailPath}`);
+            
+            // 上传缩略图到微信
+            console.log('📤 上传缩略图到微信...');
+            const uploadedThumb = await uploadWechatImage(thumbnailPath, 'thumb');
+            if (uploadedThumb.media_id) {
+                thumbMediaId = uploadedThumb.media_id;
+                useCustomThumb = true;
+                console.log(`✅ 缩略图已上传: ${thumbMediaId}`);
+                
+                // 将图片插入到文章开头
+                const imgHtml = `<p style="text-align:center;margin:0 0 20px 0;"><img src="${thumbnail.url}" style="max-width:100%;height:auto;border-radius:8px;" alt="${title}"></p>`;
+                finalContentHtml = imgHtml + contentHtml;
+            } else {
+                console.log('⚠️ 缩略图上传失败，使用默认封面');
+            }
+        } catch (e) {
+            console.log('⚠️ 缩略图处理失败:', e.message);
+        }
+    }
 
     // 6. 发布微信
-    console.log('📤 发布到微信公众号草稿箱...\n');
+    console.log('\n📤 发布到微信公众号草稿箱...\n');
     try {
-        const resp = await publishWechat(title, digest, contentHtml);
+        let resp;
+        if (useCustomThumb) {
+            resp = await publishWechatWithThumb(title, digest, finalContentHtml, thumbMediaId);
+        } else {
+            resp = await publishWechat(title, digest, finalContentHtml);
+        }
         const mediaId = resp.media_id || resp.draft_id;
 
         if (mediaId || resp.errcode === 0) {
@@ -454,7 +652,42 @@ async function main() {
             
             console.log('');
             saveLog(title, topic.id, topic.topic, topic.category, 'SUCCESS', article.length);
-        } else {
+            
+            // ── 多平台发布 ──────────────────────────────────────
+            console.log('\n' + '═'.repeat(52));
+            console.log('  🚀 启动多平台发布...');
+            console.log('═'.repeat(52) + '\n');
+            
+            try {
+                // 动态导入多平台发布器
+                const multiPlatform = require('./video-platforms/multi-platform-publisher');
+                
+                const articleData = {
+                    title: title,
+                    content: article,
+                    summary: digest,
+                    topic: topic
+                };
+                
+                // 检查是否启用多平台发布
+                const enableMultiPlatform = process.env.ENABLE_MULTI_PLATFORM === 'true';
+                
+                if (enableMultiPlatform) {
+                    await multiPlatform.publishToAllPlatforms(articleData, {
+                        publishReddit: true,
+                        publishDouyin: false,  // 需要扫码登录，默认关闭
+                        publishYouTube: false, // 需要配置 API，默认关闭
+                        generateVideo: true,
+                        generateManhua: true,
+                        generateAIVideo: false // AI 视频生成较慢，默认关闭
+                    });
+                } else {
+                    console.log('⚠️  多平台发布未启用（设置 ENABLE_MULTI_PLATFORM=true 启用）');
+                }
+            } catch (mpErr) {
+                console.log(`⚠️  多平台发布异常: ${mpErr.message}`);
+            }
+            
             console.error('❌ 发布失败:', JSON.stringify(resp));
             saveLog(title, topic.id, topic.topic, topic.category, 'FAIL', article.length);
         }

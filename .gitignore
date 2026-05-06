@@ -1,20 +1,28 @@
-# Dependencies
+# 依赖
 node_modules/
+package-lock.json
 
-# Output directories
+# 环境变量和敏感配置
+.env
+*.auth.json
+douyin-auth.json
+
+# 输出文件
 output/
-output-enhanced/
-*.html
+*.log
+*.mp4
+*.jpg
 *.png
 
-# Logs
-logs
-*.log
-npm-debug.log*
+# 临时文件
+tmp/
+temp/
+*.tmp
 
-# OS
+# 系统文件
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # IDE
 .vscode/
@@ -22,24 +30,16 @@ Thumbs.db
 *.swp
 *.swo
 
-# Environment（敏感配置，不提交）
-.env
-.env.local
-.env.production
-
-# 用户私有配置（含API Key占位符，安全起见不提交）
-config/user-config.json
-
-# 运行时数据
-automation_logs.json
-pipeline_execution.json
-today_article.json
-daily_execution_report_*.md
-review_history.json
-
-# Coverage
-coverage/
-
-# Build
+# 构建产物
 dist/
 build/
+
+# 测试
+coverage/
+.nyc_output/
+
+# 其他
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
