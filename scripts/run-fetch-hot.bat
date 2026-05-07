@@ -1,5 +1,5 @@
 @echo off
-chcp 65001
-cd /d "C:\Users\tuan_\WorkBuddy\20260317201006\wechat-publisher-plugin\scripts"
+chcp 65001 >nul 2>&1
+cd /d "%~dp0"
 node fetch-hot.js
 pause
