@@ -109,13 +109,11 @@ async function main() {
             console.log(`🚀 增强发布: ${file}\n`);
             await engine.publishEnhanced(file, enhancedTitle);
             break;
-<<<<<<< HEAD
-
         case '--v4':
             // 增强版引擎 v4：真正抓取热点 + 深度搜索 + 卡兹克写作
             const { spawn: sSpawn } = require('child_process');
             const enhEnginePath = require('path').join(__dirname, 'scripts', 'enhanced-engine.js');
-            console.log('🚀 启动增强版引擎 v4...\n');
+            console.log('🚀 启动增强版引擎 v6...\n');
             const proc = sSpawn('node', [enhEnginePath], {
                 cwd: __dirname,
                 stdio: 'inherit',
@@ -124,8 +122,6 @@ async function main() {
             proc.on('close', code => process.exit(code || 0));
             proc.on('error', err => { console.error(err.message); process.exit(1); });
             return;
-=======
->>>>>>> 94aacffdf057ce974a46666170b0801bd771e82a
             
         default:
             console.error('未知命令:', command);

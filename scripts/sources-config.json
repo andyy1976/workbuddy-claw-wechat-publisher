@@ -1,0 +1,131 @@
+{
+  "version": "1.0.0",
+  "sources": [
+    {
+      "id": "weibo-hot",
+      "name": "微博热搜",
+      "tier": 2,
+      "type": "api",
+      "url": "https://weibo.com/ajax/side/hotSearch",
+      "category": ["综合", "社会", "娱乐"],
+      "enabled": true,
+      "fetchInterval": 1800000,
+      "params": {
+        "limit": 50
+      }
+    },
+    {
+      "id": "zhihu-hot",
+      "name": "知乎热榜",
+      "tier": 2,
+      "type": "api",
+      "url": "https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total",
+      "category": ["知识", "科技", "社会"],
+      "enabled": true,
+      "fetchInterval": 1800000,
+      "params": {
+        "limit": 50
+      }
+    },
+    {
+      "id": "reddit-askreddit",
+      "name": "Reddit AskReddit",
+      "tier": 2,
+      "type": "api",
+      "url": "https://www.reddit.com/r/AskReddit/hot.json",
+      "category": ["故事", "讨论", "生活"],
+      "enabled": true,
+      "fetchInterval": 3600000,
+      "params": {
+        "limit": 25
+      }
+    },
+    {
+      "id": "reddit-technology",
+      "name": "Reddit Technology",
+      "tier": 2,
+      "type": "api",
+      "url": "https://www.reddit.com/r/technology/hot.json",
+      "category": ["科技", "AI", "互联网"],
+      "enabled": true,
+      "fetchInterval": 3600000,
+      "params": {
+        "limit": 25
+      }
+    },
+    {
+      "id": "unifolm-resources",
+      "name": "宇树具身智能社群",
+      "tier": 3,
+      "type": "api",
+      "url": "https://api.unitree.com/website/forum/resource/list",
+      "category": ["具身智能", "机器人", "开源"],
+      "enabled": true,
+      "fetchInterval": 7200000,
+      "params": {
+        "limit": 50
+      }
+    }
+  ],
+  "tiers": {
+    "1": {
+      "name": "官方一手",
+      "weight": 1.5,
+      "description": "官方博客、公告、发布会"
+    },
+    "1.5": {
+      "name": "官方社媒",
+      "weight": 1.2,
+      "description": "官方 Twitter/微博/公众号"
+    },
+    "2": {
+      "name": "KOL/媒体",
+      "weight": 1.0,
+      "description": "专业媒体、知名博主"
+    },
+    "3": {
+      "name": "垂直行业",
+      "weight": 0.8,
+      "description": "行业垂直社区、论坛"
+    }
+  },
+  "categoryThresholds": {
+    "AI": 60,
+    "科技": 55,
+    "社会": 65,
+    "娱乐": 70,
+    "故事": 50,
+    "具身智能": 45,
+    "开源": 40
+  },
+  "scoring": {
+    "dimensions": {
+      "novelty": {
+        "name": "新颖性",
+        "weight": 0.20,
+        "description": "是否最新发布/首次报道"
+      },
+      "importance": {
+        "name": "重要性",
+        "weight": 0.25,
+        "description": "影响范围、行业影响"
+      },
+      "relevance": {
+        "name": "相关性",
+        "weight": 0.20,
+        "description": "与目标领域的相关度"
+      },
+      "readability": {
+        "name": "可读性",
+        "weight": 0.15,
+        "description": "内容质量、信息密度"
+      },
+      "viral": {
+        "name": "传播性",
+        "weight": 0.20,
+        "description": "话题性、讨论潜力"
+      }
+    },
+    "promptTemplate": "你是一个专业的内容评分助手。请对以下内容进行五维评分（0-100分）。\n\n标题：{title}\n摘要：{summary}\n来源：{source}\n分类：{category}\n\n请以 JSON 格式返回：\n{\"novelty\": 分数, \"importance\": 分数, \"relevance\": 分数, \"readability\": 分数, \"viral\": 分数, \"reason\": \"简短理由\"}\n\n评分标准：\n- 新颖性：是否最新发布、首次报道、独家信息\n- 重要性：影响范围、行业影响、社会影响\n- 相关性：与 AI/科技/创新领域的相关程度\n- 可读性：内容质量、信息密度、逻辑清晰\n- 传播性：话题性、讨论潜力、情绪共鸣"
+  }
+}

@@ -1,0 +1,37 @@
+[
+  {
+    "id": "REV-1778074806277-bhn5eccvj",
+    "articleId": 1865,
+    "articleTitle": "测试文章标题",
+    "submitter": "超云艾艾",
+    "submitTime": "2026-05-06T13:40:06.277Z",
+    "currentLevel": 1,
+    "status": "pending",
+    "autoReviewResult": {
+      "action": "flag",
+      "reason": "需要人工审核",
+      "details": [
+        {
+          "type": "sensitive_words",
+          "action": "pass",
+          "message": "敏感词检测通过"
+        },
+        {
+          "type": "plagiarism",
+          "action": "pass",
+          "message": "抄袭检测通过: 5.0%",
+          "similarity": 0.04961858495757676
+        },
+        {
+          "type": "quality_score",
+          "action": "flag",
+          "message": "质量评分偏低: 50/100",
+          "score": 50
+        }
+      ]
+    },
+    "reviewHistory": [],
+    "modifications": [],
+    "assignedReviewer": "初审编辑-张三"
+  }
+]

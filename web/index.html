@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WorkBuddy 内容管理系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* 头部 */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+        }
+        
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: transform 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        }
+        
+        .stat-card .icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+        
+        .stat-card.blue .icon { background: #e3f2fd; }
+        .stat-card.green .icon { background: #e8f5e9; }
+        .stat-card.orange .icon { background: #fff3e0; }
+        .stat-card.purple .icon { background: #f3e5f5; }
+        
+        .stat-card .number {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .stat-card .label {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        /* 主内容区 */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+        }
+        
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* 内容面板 */
+        .panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        
+        .panel-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .panel-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .panel-body {
+            padding: 20px 24px;
+        }
+        
+        /* 审核列表 */
+        .review-list {
+            list-style: none;
+        }
+        
+        .review-item {
+            padding: 16px;
+            border-bottom: 1px solid #f5f5f5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+        
+        .review-item:hover {
+            background: #fafafa;
+        }
+        
+        .review-item:last-child {
+            border-bottom: none;
+        }
+        
+        .review-info h4 {
+            font-size: 15px;
+            margin-bottom: 6px;
+        }
+        
+        .review-info p {
+            font-size: 13px;
+            color: #666;
+        }
+        
+        .review-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-pending { background: #fff3e0; color: #e65100; }
+        .status-approved { background: #e8f5e9; color: #2e7d32; }
+        .status-rejected { background: #ffebee; color: #c62828; }
+        .status-reviewing { background: #e3f2fd; color: #1565c0; }
+        
+        /* 按钮 */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a6fd6;
+        }
+        
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        /* 侧边栏 */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .menu-list {
+            list-style: none;
+        }
+        
+        .menu-item {
+            padding: 14px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .menu-item:hover {
+            background: #f5f7fa;
+        }
+        
+        .menu-item.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .menu-item .icon {
+            font-size: 18px;
+        }
+        
+        /* 快速操作 */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        
+        .quick-action {
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .quick-action:hover {
+            background: #e9ecef;
+        }
+        
+        .quick-action .icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        
+        .quick-action .label {
+            font-size: 13px;
+            color: #666;
+        }
+        
+        /* 进度条 */
+        .progress-bar {
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+        
+        /* 标签 */
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #666;
+            margin-right: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>🚀 WorkBuddy 内容管理系统</h1>
+            <p>企业级内容创作、审核、发布一站式解决方案</p>
+        </div>
+        
+        <!-- 统计卡片 -->
+        <div class="stats-grid">
+            <div class="stat-card blue">
+                <div class="icon">📝</div>
+                <div class="number">168</div>
+                <div class="label">总文章数</div>
+            </div>
+            <div class="stat-card orange">
+                <div class="icon">🔄</div>
+                <div class="number">12</div>
+                <div class="label">待审核</div>
+            </div>
+            <div class="stat-card green">
+                <div class="icon">✅</div>
+                <div class="number">156</div>
+                <div class="label">已发布</div>
+            </div>
+            <div class="stat-card purple">
+                <div class="icon">📊</div>
+                <div class="number">92%</div>
+                <div class="label">审核通过率</div>
+            </div>
+        </div>
+        
+        <!-- 主内容 -->
+        <div class="main-content">
+            <!-- 左侧：审核列表 -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>📋 待审核文章</h2>
+                    <button class="btn btn-primary btn-sm">查看全部</button>
+                </div>
+                <div class="panel-body">
+                    <ul class="review-list">
+                        <li class="review-item">
+                            <div class="review-info">
+                                <h4>2026年AI新突破：多模态智能体的革命性进展</h4>
+                                <p>提交人: 张三 | 提交时间: 2026-03-22 19:28</p>
+                                <div style="margin-top: 8px;">
+                                    <span class="tag">AI</span>
+                                    <span class="tag">技术</span>
+                                </div>
+                            </div>
+                            <span class="review-status status-reviewing">复审中</span>
+                        </li>
+                        <li class="review-item">
+                            <div class="review-info">
+                                <h4>SCSAI 可持续产品开发与合规解决方案</h4>
+                                <p>提交人: 李四 | 提交时间: 2026-03-22 18:15</p>
+                                <div style="margin-top: 8px;">
+                                    <span class="tag">产品</span>
+                                    <span class="tag">合规</span>
+                                </div>
+                            </div>
+                            <span class="review-status status-pending">待初审</span>
+                        </li>
+                        <li class="review-item">
+                            <div class="review-info">
+                                <h4>Web3 3.0时代：去中心化应用的商业落地路径</h4>
+                                <p>提交人: 王五 | 提交时间: 2026-03-22 17:42</p>
+                                <div style="margin-top: 8px;">
+                                    <span class="tag">区块链</span>
+                                    <span class="tag">Web3</span>
+                                </div>
+                            </div>
+                            <span class="review-status status-approved">已通过</span>
+                        </li>
+                        <li class="review-item">
+                            <div class="review-info">
+                                <h4>医疗AI革命：精准医疗与个性化健康管理</h4>
+                                <p>提交人: 赵六 | 提交时间: 2026-03-22 16:30</p>
+                                <div style="margin-top: 8px;">
+                                    <span class="tag">医疗</span>
+                                    <span class="tag">AI</span>
+                                </div>
+                            </div>
+                            <span class="review-status status-rejected">已驳回</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- 右侧：侧边栏 -->
+            <div class="sidebar">
+                <!-- 快速操作 -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>⚡ 快速操作</h2>
+                    </div>
+                    <div class="panel-body">
+                        <div class="quick-actions">
+                            <div class="quick-action">
+                                <div class="icon">✍️</div>
+                                <div class="label">新建文章</div>
+                            </div>
+                            <div class="quick-action">
+                                <div class="icon">🤖</div>
+                                <div class="label">AI生成</div>
+                            </div>
+                            <div class="quick-action">
+                                <div class="icon">📤</div>
+                                <div class="label">批量发布</div>
+                            </div>
+                            <div class="quick-action">
+                                <div class="icon">📊</div>
+                                <div class="label">数据报表</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 菜单 -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>📁 功能菜单</h2>
+                    </div>
+                    <div class="panel-body">
+                        <ul class="menu-list">
+                            <li class="menu-item active">
+                                <span class="icon">📝</span>
+                                <span>文章管理</span>
+                            </li>
+                            <li class="menu-item">
+                                <span class="icon">🔄</span>
+                                <span>审核工作流</span>
+                            </li>
+                            <li class="menu-item">
+                                <span class="icon">📤</span>
+                                <span>多平台发布</span>
+                            </li>
+                            <li class="menu-item">
+                                <span class="icon">📊</span>
+                                <span>数据分析</span>
+                            </li>
+                            <li class="menu-item">
+                                <span class="icon">🖼️</span>
+                                <span>素材库</span>
+                            </li>
+                            <li class="menu-item">
+                                <span class="icon">👥</span>
+                                <span>团队管理</span>
+                            </li>
+                            <li class="menu-item">
+                                <span class="icon">⚙️</span>
+                                <span>系统设置</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- 审核进度 -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>📈 审核进度</h2>
+                    </div>
+                    <div class="panel-body">
+                        <div style="margin-bottom: 16px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span>今日审核</span>
+                                <span>8/12</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 67%"></div>
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 16px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span>本周发布</span>
+                                <span>45/50</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 90%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                <span>月度目标</span>
+                                <span>156/200</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 78%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 模拟数据更新
+        document.querySelectorAll('.quick-action').forEach(action => {
+            action.addEventListener('click', function() {
+                const label = this.querySelector('.label').textContent;
+                alert(`点击了: ${label}`);
+            });
+        });
+        
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>
