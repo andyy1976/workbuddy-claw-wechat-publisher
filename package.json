@@ -4,7 +4,7 @@
   "description": "微信公众号智能发布器 v3 - 热点抓取 + 卡兹克风格AI写作 + 增强版自动封面配图 + 一键发布（全整合版）",
   "main": "index.js",
   "bin": {
-    "wechat-publisher": "./index.js"
+    "wechat-publisher": "index.js"
   },
   "scripts": {
     "start": "node index.js --publish",
@@ -35,7 +35,18 @@
     "form-data": "^4.0.5",
     "googleapis": "^171.4.0",
     "minimist": "^1.2.8",
-    "mysql2": "^3.9.0",
+    "mysql2": "^3.22.3",
     "playwright": "^1.59.1"
-  }
+  },
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andyy1976/workbuddy-claw-wechat-publisher.git"
+  },
+  "bugs": {
+    "url": "https://github.com/andyy1976/workbuddy-claw-wechat-publisher/issues"
+  },
+  "homepage": "https://github.com/andyy1976/workbuddy-claw-wechat-publisher#readme"
 }
