@@ -31,10 +31,58 @@
 - **影响**: 多平台分发未能执行
 - **修复建议**: 在项目根目录执行 `npm install yargs`
 
+---
+# 微信公众号发布错误日志
+
+## 2026-05-12 08:30
+
+### 错误1: DeepSeek API密钥无效
+- **详情**: `Authentication Fails, Your api key: ****4cc2 is invalid`
+- **影响**: 无法调用deepseek服务
+
+### 错误2: Astron服务过期
+- **详情**: `AppIdNoAuthError: Expired`
+- **位置**: astron-code-latest
+- **原因**: 服务已过期
+
+### 错误3: 所有Anonymous模型不可用
+- **详情**: `请求的模型不存在或暂不可用`
+- **影响**: 所有备用模型均无法使用
+
 ### 发布结果
-- **微信草稿箱**: ✅ 发布成功
-- **多平台分发**: ❌ 失败
-- **文章标题**: 从软件到智能体：AI 进化的终极真相，不是替代而是成为你的超级合伙人
-- **字数**: 5839
-- **分类**: 行业趋势
-- **MediaID**: fOSSI4rB_2kncg_EYxVB_2iuKkJHG0IZcQXjUMFNhvo5N4Ew2pUdnkKY3Ki-I3W-
+- **微信草稿箱**: ❌ 发布失败
+- **原因**: 所有AI提供商均不可用
+- **状态**: 需要修复AI服务配置后重试
+
+### 修复建议
+1. 检查并更新deepseek API密钥
+2. 续费astron服务
+3. 检查所有anonymous模型的配置
+
+---
+
+## 2026-05-13 08:30
+
+### 错误1: DeepSeek API密钥无效（连续第2天）
+- **详情**: `Authentication Fails, Your api key: ****4cc2 is invalid`
+- **影响**: 无法调用deepseek服务
+
+### 错误2: Astron服务过期（连续第2天）
+- **详情**: `AppIdNoAuthError: Expired`
+- **备注**: 标题生成成功，但文章生成时失败
+
+### 错误3: 所有Anonymous模型不可用（连续第2天）
+- **详情**: `请求的模型不存在或暂不可用`
+- **影响**: 7个备用模型均无法使用
+
+### 发布结果
+- **微信草稿箱**: ❌ 发布失败
+- **话题**: GPT-6发布：OpenAI的又一次飞跃（热度6万）
+- **标题**: 万亿参数、200万上下文：GPT-6这次到底藏了什么惊天秘密？（标题生成成功）
+- **状态**: 连续第2天失败
+
+### 修复建议（紧急）
+1. 更新 .env 文件中的 DEEPSEEK_API_KEY
+2. 续费 astron-code-latest 服务
+3. 删除或更新不可用的anonymous模型配置
+

@@ -10,79 +10,61 @@
       "note": "DeepSeek v4-flash 便宜(¥0.1/M), v4-pro 贵(¥1/M)"
     },
     {
+      "name": "volcengine-plan",
+      "enabled": true,
+      "baseUrl": "https://ark.cn-beijing.volces.com/api/coding/v3",
+      "apiKey": "46bbb2c6-4ed0-4893-8b05-83179c41e83b",
+      "models": ["ark-code-latest"],
+      "priority": 2,
+      "note": "火山方舟 Volcano Engine Ark 编程模型"
+    },
+    {
       "name": "astron",
       "enabled": true,
       "baseUrl": "https://maas-coding-api.cn-huabei-1.xf-yun.com/v2",
       "apiKey": "MDlkZDI1YTU0ZTkyZDMyOTllOWMwMzQ5",
       "models": ["astron-code-latest"],
-      "priority": 2,
+      "priority": 3,
       "headers": {
         "Authorization": "Bearer 0508e2d155d689743f9fef6e9fd20400:MDlkZDI1YTU0ZTkyZDMyOTllOWMwMzQ5"
       },
       "note": "讯飞Astron代码模型"
     },
     {
-      "name": "anonymous-lumen",
+      "name": "anonymous-teal",
       "enabled": true,
       "baseUrl": "http://127.0.0.1:19000/proxy/llm",
       "apiKey": "${QCLAW_LLM_API_KEY}",
-      "models": ["anonymous/lumen"],
+      "models": ["anonymous/teal"],
       "priority": 3,
-      "note": "匿名模型 lumen (通过本地代理)"
+      "note": "匿名模型 teal (通过本地代理)"
     },
     {
-      "name": "anonymous-ebullient",
+      "name": "anonymous-coral",
       "enabled": true,
       "baseUrl": "http://127.0.0.1:19000/proxy/llm",
       "apiKey": "${QCLAW_LLM_API_KEY}",
-      "models": ["anonymous/ebullient"],
+      "models": ["anonymous/coral"],
       "priority": 4,
-      "note": "匿名模型 ebullient"
+      "note": "匿名模型 coral"
     },
     {
-      "name": "anonymous-elm",
+      "name": "anonymous-maroon",
       "enabled": true,
       "baseUrl": "http://127.0.0.1:19000/proxy/llm",
       "apiKey": "${QCLAW_LLM_API_KEY}",
-      "models": ["anonymous/elm"],
+      "models": ["anonymous/maroon"],
       "priority": 5,
-      "note": "匿名模型 elm (支持图文)"
+      "note": "匿名模型 maroon"
     },
     {
-      "name": "anonymous-maple",
+      "name": "anonymous-lavender",
       "enabled": true,
       "baseUrl": "http://127.0.0.1:19000/proxy/llm",
       "apiKey": "${QCLAW_LLM_API_KEY}",
-      "models": ["anonymous/maple"],
+      "models": ["anonymous/lavender"],
       "priority": 6,
-      "note": "匿名模型 maple"
-    },
-    {
-      "name": "anonymous-petrichor",
-      "enabled": true,
-      "baseUrl": "http://127.0.0.1:19000/proxy/llm",
-      "apiKey": "${QCLAW_LLM_API_KEY}",
-      "models": ["anonymous/petrichor"],
-      "priority": 7,
-      "note": "匿名模型 petrichor"
-    },
-    {
-      "name": "anonymous-poplar",
-      "enabled": true,
-      "baseUrl": "http://127.0.0.1:19000/proxy/llm",
-      "apiKey": "${QCLAW_LLM_API_KEY}",
-      "models": ["anonymous/poplar"],
-      "priority": 8,
-      "note": "匿名模型 poplar"
-    },
-    {
-      "name": "anonymous-sonder",
-      "enabled": true,
-      "baseUrl": "http://127.0.0.1:19000/proxy/llm",
-      "apiKey": "${QCLAW_LLM_API_KEY}",
-      "models": ["anonymous/sonder"],
-      "priority": 9,
-      "note": "匿名模型 sonder"
+      "note": "匿名模型 lavendar"
     }
   ],
   "fallbackStrategy": "priority",
