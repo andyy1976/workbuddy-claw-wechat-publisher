@@ -1,0 +1,97 @@
+/**
+ * CMS 集成路由
+ * GET  /api/cms/categories     - 获取栏目列表
+ * GET  /api/cms/articles        - 获取文章列表
+ * POST /api/cms/push            - 推送文章到CMS
+ * POST /api/cms/match-category  - 智能匹配栏目
+ * GET  /api/cms/stats           - CMS数据统计
+ */
+
+const express = require('express');
+const router = express.Router();
+const cms = require('../services/cms');
+
+// ── 获取栏目 ─────────────────────────────────────
+router.get('/categories', async (req, res) => {
+    try {
+        const result = await cms.getCategories();
+        res.json(result);
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// ── 获取文章 ─────────────────────────────────────
+router.get('/articles', async (req, res) => {
+    try {
+        const { categoryId, page, pageSize } = req.query;
+        const result = await cms.getArticles({
+            categoryId: categoryId ? parseInt(categoryId) : null,
+            page: page ? parseInt(page) : 1,
+            pageSize: pageSize ? parseInt(pageSize) : 20
+        });
+        res.json(result);
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// ── 推送文章 ─────────────────────────────────────
+router.post('/push', async (req, res) => {
+    try {
+        const { title, content, categoryId, status, source } = req.body;
+        
+        if (!title || !content) {
+            return res.status(400).json({ success: false, message: '缺少标题或内容' });
+        }
+        
+        const result = await cms.pushArticle({ title, content, categoryId, status, source });
+        
+        if (result.success) {
+            res.json({ 
+                success: true, 
+                message: '发布成功',
+                data: result 
+            });
+        } else {
+            res.status(500).json({ success: false, message: result.message || '推送失败' });
+        }
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// ── 智能匹配栏目 ─────────────────────────────────
+router.post('/match-category', async (req, res) => {
+    try {
+        const { title, content } = req.body;
+        
+        if (!title) {
+            return res.status(400).json({ success: false, message: '缺少标题' });
+        }
+        
+        const match = cms.matchCategory(title, content || '');
+        res.json({ success: true, data: match });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// ── CMS统计 ─────────────────────────────────────
+router.get('/stats', async (req, res) => {
+    try {
+        const categories = await cms.getCategories();
+        res.json({
+            success: true,
+            data: {
+                totalCategories: Object.keys(categories.data || {}).length,
+                categories: categories.data,
+                source: categories.source
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+module.exports = router;

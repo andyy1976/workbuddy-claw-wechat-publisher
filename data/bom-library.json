@@ -1,0 +1,56 @@
+{
+  "传感器模组": {
+    "code": "BOM-SEN-001",
+    "category": "核心元件",
+    "spec": "0-100MPa",
+    "price": 85,
+    "supplier": "芯感科技",
+    "leadTime": 7,
+    "critical": true
+  },
+  "信号处理板": {
+    "code": "BOM-PCB-001",
+    "category": "电路板",
+    "spec": "4层FR4",
+    "price": 42.5,
+    "supplier": "华强电子",
+    "leadTime": 3,
+    "critical": false
+  },
+  "防护外壳": {
+    "code": "BOM-MEC-001",
+    "category": "结构件",
+    "spec": "IP67铝合金",
+    "price": 68,
+    "supplier": "精密压铸",
+    "leadTime": 10,
+    "critical": false
+  },
+  "密封组件": {
+    "code": "BOM-SEA-001",
+    "category": "密封件",
+    "spec": "氟橡胶O型",
+    "price": 2.5,
+    "supplier": "密封科技",
+    "leadTime": 2,
+    "critical": true
+  },
+  "通信模块": {
+    "code": "BOM-COM-001",
+    "category": "通信",
+    "spec": "4G+BLE5.0",
+    "price": 35,
+    "supplier": "移远通信",
+    "leadTime": 5,
+    "critical": true
+  },
+  "电源管理IC": {
+    "code": "BOM-PMU-001",
+    "category": "电源",
+    "spec": "DC-DC 3.3V/5V",
+    "price": 12,
+    "supplier": "TI代理",
+    "leadTime": 3,
+    "critical": true
+  }
+}

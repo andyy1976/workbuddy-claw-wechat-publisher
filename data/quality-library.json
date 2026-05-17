@@ -1,0 +1,34 @@
+{
+  "来料检验": {
+    "standard": "GB/T 2828.1",
+    "aql": 0.65,
+    "sampleMethod": "正常检验II级",
+    "rejectRate": "≤1.5%"
+  },
+  "过程检验": {
+    "standard": "ISO 9001:2015",
+    "checkpoints": 12,
+    "frequency": "每2小时巡检",
+    "spc": true
+  },
+  "出厂检验": {
+    "standard": "GB/T 2828.1",
+    "aql": 0.4,
+    "sampleMethod": "加严检验",
+    "coverage": "100%功能+外观"
+  },
+  "可靠性测试": {
+    "items": [
+      "高低温循环",
+      "盐雾试验",
+      "振动测试",
+      "EMC"
+    ],
+    "standard": "IEC 60068"
+  },
+  "追溯体系": {
+    "method": "SN码+批次号",
+    "traceability": "来料→生产→出货全链路",
+    "retention": "10年"
+  }
+}

@@ -1,0 +1,47 @@
+[
+  {
+    "id": "PROC-001",
+    "name": "SMT贴片",
+    "station": "贴片车间",
+    "cycleTime": 45,
+    "yield": 99.7,
+    "operator": 1,
+    "equipment": "YAMAHA贴片机"
+  },
+  {
+    "id": "PROC-002",
+    "name": "回流焊接",
+    "station": "焊接车间",
+    "cycleTime": 30,
+    "yield": 99.9,
+    "operator": 1,
+    "equipment": "10温区回流炉"
+  },
+  {
+    "id": "PROC-003",
+    "name": "功能测试",
+    "station": "测试工位",
+    "cycleTime": 120,
+    "yield": 98.5,
+    "operator": 2,
+    "equipment": "ATE测试台"
+  },
+  {
+    "id": "PROC-004",
+    "name": "气密检测",
+    "station": "品质工位",
+    "cycleTime": 60,
+    "yield": 99.8,
+    "operator": 1,
+    "equipment": "气密仪"
+  },
+  {
+    "id": "PROC-005",
+    "name": "老化试验",
+    "station": "老化室",
+    "cycleTime": 14400,
+    "yield": 99.5,
+    "operator": 1,
+    "equipment": "高温老化箱"
+  }
+]
