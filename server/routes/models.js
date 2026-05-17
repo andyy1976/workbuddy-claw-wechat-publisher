@@ -76,6 +76,40 @@ router.post('/add', (req, res) => {
   }
 });
 
+// POST /api/models/update - 更新模型配置（别名，功能同 /add）
+router.post('/update', (req, res) => {
+  try {
+    const { provider, config } = req.body;
+    
+    if (!provider) {
+      return res.status(400).json({ success: false, error: '模型标识不能为空' });
+    }
+    
+    if (!config || !config.key) {
+      return res.status(400).json({ success: false, error: 'API Key 不能为空' });
+    }
+    
+    const models = loadModels();
+    models[provider] = {
+      name: config.name || provider,
+      url: config.url || '',
+      key: config.key,
+      model: config.model || '',
+      enabled: config.enabled !== false,
+      priority: config.priority || 999,
+      description: config.description || ''
+    };
+    
+    saveModels(models);
+    llm.reloadModels();
+    
+    res.json({ success: true, message: '模型配置已更新', data: models[provider] });
+  } catch (error) {
+    console.error('[Models] 更新模型配置失败:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // DELETE /api/models/:provider - 删除模型配置
 router.delete('/:provider', (req, res) => {
   try {

@@ -2,11 +2,11 @@
   "deepseek": {
     "name": "DeepSeek",
     "url": "https://api.deepseek.com/v1/chat/completions",
-    "key": "",
+    "key": "sk-61f722d4e8ed4f018c84f97563094258",
     "model": "deepseek-chat",
     "enabled": true,
-    "priority": 1,
-    "description": "DeepSeek V3 - 性价比最高，推荐首选"
+    "priority": 999,
+    "description": "DeepSeek V3 - 中文优化"
   },
   "openai": {
     "name": "OpenAI",

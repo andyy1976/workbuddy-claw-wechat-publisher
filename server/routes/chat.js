@@ -31,7 +31,9 @@ router.post('/', async (req, res) => {
         
         res.json({
             success: true,
-            reply: reply
+            data: {
+                reply: reply
+            }
         });
     } catch (e) {
         console.error('[Chat] 生成回复失败:', e.message);
