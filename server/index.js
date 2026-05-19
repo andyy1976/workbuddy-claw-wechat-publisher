@@ -36,7 +36,8 @@ const publishRoutes = require('./routes/publish');
 const productRoutes = require('./routes/product');
 const styleRoutes = require('./routes/style');
 const chatRoutes = require('./routes/chat');
-const modelsRoutes = require('./routes/models');  // 新增：模型管理路由
+const modelsRoutes = require('./routes/models');  // 模型管理路由
+const tasksRoutes = require('./routes/tasks');  // 任务管理路由
 
 app.use('/api/content', contentRoutes);
 app.use('/api/cms', cmsRoutes);
@@ -44,7 +45,8 @@ app.use('/api/publish', publishRoutes);
 app.use('/api/product', productRoutes);
 app.use('/api/style', styleRoutes);
 app.use('/api/chat', chatRoutes);
-app.use('/api/models', modelsRoutes);  // 新增：注册模型管理路由
+app.use('/api/models', modelsRoutes);  // 注册模型管理路由
+app.use('/api/tasks', tasksRoutes);  // 注册任务管理路由
 
 // ── 健康检查 ──────────────────────────────────────
 app.get('/api/health', (req, res) => {
@@ -71,13 +73,13 @@ app.use((err, req, res, next) => {
 // ── 启动 ──────────────────────────────────────────
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`
-╔══════════════════════════════════════════════════╗
+╔════════════════════════════════════════════════╗
 ║   WorkBuddy 内容数字员工平台 v6.0               ║
 ║   服务已启动                                     ║
-╠══════════════════════════════════════════════════╣
+╠════════════════════════════════════════════════╣
 ║   地址: http://localhost:${PORT}                  ║
 ║   API:  http://localhost:${PORT}/api/health       ║
 ║   CMS:  http://localhost:${PORT}/api/cms/...      ║
-╚══════════════════════════════════════════════════╝
+╚════════════════════════════════════════════════╝
     `);
 });

@@ -192,6 +192,7 @@
                 <div class="nav-item" data-page="style"><span class="icon">🎨</span><span>风格系统</span></div>
                 <div class="nav-section">集成</div>
                 <div class="nav-item" data-page="cms"><span class="icon">🔗</span><span>CMS管理</span></div>
+                <div class="nav-item" onclick="window.location.href='/tasks.html'"><span class="icon">📅</span><span>定时任务</span></div>
                 <div class="nav-section">AI对话</div>
                 <div class="nav-item" data-page="chat"><span class="icon">💬</span><span>智能对话</span></div>
                 <div class="nav-item" data-page="models"><span class="icon">🧠</span><span>模型配置</span></div>
@@ -308,13 +309,21 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">📱 目标平台</label>
-                            <select class="form-select" id="genPlatform">
-                                <option value="wechat">微信公众号</option>
-                                <option value="xiaohongshu">小红书</option>
-                                <option value="douyin">抖音文案</option>
-                                <option value="cms">企业官网CMS</option>
-                            </select>
+                            <label class="form-label">📱 目标平台（可多选）</label>
+                            <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:8px;">
+                                <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                                    <input type="checkbox" name="genPlatform" value="wechat" checked> 微信公众号
+                                </label>
+                                <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                                    <input type="checkbox" name="genPlatform" value="xiaohongshu"> 小红书
+                                </label>
+                                <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                                    <input type="checkbox" name="genPlatform" value="douyin"> 抖音文案
+                                </label>
+                                <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                                    <input type="checkbox" name="genPlatform" value="cms"> 企业官网CMS
+                                </label>
+                            </div>
                         </div>
                     </div>
                     <div class="form-row">
@@ -415,9 +424,65 @@
                 <!-- ═══ Publish ═══ -->
                 <div class="page" id="page-publish">
                     <div class="section-tabs">
-                        <div class="section-tab active" data-tab="pub-single">单篇发布</div>
+                        <div class="section-tab active" data-tab="pub-auto">AI自动生成</div>
+                        <div class="section-tab" data-tab="pub-single">单篇发布</div>
                         <div class="section-tab" data-tab="pub-batch">批量推送</div>
                         <div class="section-tab" data-tab="pub-history">发布记录</div>
+                    </div>
+
+                    <!-- AI自动生成发布 -->
+                    <div id="tab-pub-auto">
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">AI自动生成并发布</span>
+                                <span class="tag tag-accent">enhanced-engine.js</span>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">AI模型</label>
+                                    <select class="form-select" id="autoModel">
+                                        <option value="deepseek">DeepSeek v4-flash</option>
+                                        <option value="ark-code">火山方舟 Ark</option>
+                                        <option value="astron">讯飞 Astron</option>
+                                        <option value="teal">匿名模型 Teal</option>
+                                        <option value="coral">匿名模型 Coral</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">写作风格</label>
+                                    <select class="form-select" id="autoStyle">
+                                        <option value="kazik">卡兹克风格（推荐）</option>
+                                        <option value="professional">专业深度</option>
+                                        <option value="story">轻松故事</option>
+                                        <option value="technical">硬核技术</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">字数范围</label>
+                                    <select class="form-select" id="autoWords">
+                                        <option value="2000">2000字（快速）</option>
+                                        <option value="4000" selected>4000字（推荐）</option>
+                                        <option value="6000">6000字（深度）</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">话题关键词（可选，留空自动从话题库选择）</label>
+                                <input class="form-input" id="autoKeywords" placeholder="例如：人形机器人, AI, 大模型">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">发布平台</label>
+                                <div class="checkbox-group">
+                                    <label><input type="checkbox" id="pubToWechat" checked> 微信公众号草稿箱</label>
+                                    <label><input type="checkbox" id="pubToCMS" checked> CMS数据库</label>
+                                </div>
+                            </div>
+                            <div class="flex-row" style="margin-top:16px;">
+                                <button class="btn btn-primary" onclick="runAutoGenerate()">✨ AI生成并发布</button>
+                                <button class="btn" onclick="previewTopics()">📋 查看话题库</button>
+                            </div>
+                            <div id="autoGenerateLog" style="margin-top:16px; padding:12px; background:var(--bg); border-radius:6px; font-size:13px; color:var(--text2); display:none;"></div>
+                        </div>
                     </div>
 
                     <div id="tab-pub-single">
@@ -450,7 +515,7 @@
                             <textarea class="form-textarea" id="pubContent" rows="15" placeholder="HTML格式的文章内容"></textarea>
                         </div>
                         <div class="flex-row">
-                            <button class="btn btn-primary" onclick="publishToCMS()">📤 推送到CMS</button>
+                            <button class="btn btn-primary" onclick="publishToCMSOnly()">📤 推送到CMS</button>
                             <button class="btn" onclick="previewContent()">👁️ 预览排版</button>
                             <button class="btn" onclick="autoMatchCategory()">🔍 智能匹配栏目</button>
                         </div>
@@ -572,12 +637,15 @@
                             <span class="card-title">模型配置</span>
                             <button class="btn btn-sm btn-success" onclick="loadModelList()">刷新列表</button>
                         </div>
+                        <div id="currentModelBadge" style="padding:8px 16px; background:var(--surface2); border-radius:6px; margin-bottom:12px; font-size:14px; display:none;">
+                            当前使用: <strong id="currentModelName">-</strong>
+                        </div>
                         <div class="table-responsive">
                         <table class="data-table" id="modelTable">
                             <thead>
                                 <tr>
                                     <th>模型名称</th>
-                                    <th>类型</th>
+                                    <th>API URL</th>
                                     <th>优先级</th>
                                     <th>状态</th>
                                     <th>操作</th>
@@ -690,6 +758,10 @@
             const topic = document.getElementById('genTopic').value.trim();
             if (!topic) return showToast('请输入内容主题', 'error');
 
+            // Get selected platforms
+            const platforms = Array.from(document.querySelectorAll('input[name="genPlatform"]:checked')).map(cb => cb.value);
+            if (platforms.length === 0) return showToast('请至少选择一个目标平台', 'error');
+
             const btn = document.getElementById('btnGenerate');
             btn.disabled = true;
             document.getElementById('genLoading').style.display = 'flex';
@@ -702,7 +774,8 @@
                     body: JSON.stringify({
                         topic,
                         style: document.getElementById('genStyle').value,
-                        platform: document.getElementById('genPlatform').value,
+                        platform: platforms[0],  // Generate for first selected platform
+                        platforms: platforms,  // Send all selected platforms
                         productId: document.getElementById('genProductId').value || null,
                         context: document.getElementById('genContext').value,
                         wordCount: parseInt(document.getElementById('genWordCount').value) || 2000
@@ -718,6 +791,23 @@
                     sessionStats.generated++;
                     updateStats();
                     showToast('内容生成成功!');
+
+                    // AUTO-PUBLISH to all selected platforms
+                    if (platforms.length > 0) {
+                        showToast(`开始自动发布到 ${platforms.length} 个平台...`);
+                        // Fill pubTitle and pubContent
+                        const title = d.data.titles.split('\n')[0].replace(/^\d+[.、\)]\s*/, '').trim() || topic;
+                        const content = d.data.content;
+                        
+                        document.getElementById('pubTitle').value = title;
+                        document.getElementById('pubContent').value = content;
+                        // Check the same platforms in pubPlatform
+                        document.querySelectorAll('input[name="pubPlatform"]').forEach(cb => {
+                            cb.checked = platforms.includes(cb.value);
+                        });
+                        // Auto-publish (with delay to let UI update)
+                        setTimeout(() => publishToMultiplePlatforms(title, content), 500);
+                    }
                 } else {
                     showToast(d.message || '生成失败', 'error');
                 }
@@ -799,11 +889,25 @@
         function pushToCMSFromGenerate() {
             const content = document.getElementById('genContent').textContent;
             const titles = document.getElementById('genTitles').textContent;
-            const title = titles.split('\n')[0].replace(/^\d+[.、))]\s*/, '').trim() || document.getElementById('genTopic').value;
+            const title = titles.split('\n')[0].replace(/^\d+[.、\)]\s*/, '').trim() || document.getElementById('genTopic').value;
             document.getElementById('pubTitle').value = title;
             document.getElementById('pubContent').value = content;
+            
+            // Get selected platforms from generation page
+            const platforms = Array.from(document.querySelectorAll('input[name="genPlatform"]:checked')).map(cb => cb.value);
+            
+            // Check the same platforms in publish page
+            document.querySelectorAll('input[name="pubPlatform"]').forEach(cb => {
+                cb.checked = platforms.includes(cb.value);
+            });
+            
             navigateTo('publish');
-            showToast('内容已带入发布页');
+            showToast('内容已带入发布页，开始发布...');
+            
+            // Auto-publish to all selected platforms
+            if (platforms.length > 0) {
+                setTimeout(() => publishToMultiplePlatforms(), 500);
+            }
         }
 
         async function autoMatchCategory() {
@@ -1180,60 +1284,57 @@
                 // Handle various response formats
                 let models = [];
 
-                if (d.success && d.data) {
-                    if (Array.isArray(d.data)) {
-                        // Format: {success: true, data: [model1, model2, ...]}
-                        models = d.data;
-                    } else if (typeof d.data === 'object' && !Array.isArray(d.data)) {
-                        // Format: {success: true, data: {deepseek: {...}, openai: {...}, ...}}
-                        // CONVERT OBJECT TO ARRAY!
-                        models = Object.entries(d.data).map(([id, model]) => ({
-                            id: id,
-                            ...model
-                        }));
-                    }
+                // Handle _selected field and object format
+                const selectedModel = d.data._selected || null;
+                let rawData = d.data;
+                if (d.data && typeof d.data === 'object' && !Array.isArray(d.data) && !d.data._selected) {
+                    rawData = d.data;
                 }
 
-                console.log('Models to display:', models);
+                if (Array.isArray(d.data)) {
+                    models = d.data;
+                } else if (d.data && typeof d.data === 'object' && !Array.isArray(d.data)) {
+                    // {deepseek:{...}, volcengine:{...}} → extract _selected + array
+                    models = Object.entries(d.data)
+                        .filter(([k]) => k !== '_selected')
+                        .map(([id, model]) => ({ id, ...model }));
+                }
 
-                if (models.length === 0) {
+                // Show currently selected model badge
+                const badge = document.getElementById('currentModelBadge');
+                const nameEl = document.getElementById('currentModelName');
+                if (badge && nameEl && selectedModel) {
+                    const sel = models.find(m => m.id === selectedModel);
+                    nameEl.textContent = sel ? `${sel.name} (${selectedModel})` : selectedModel;
+                    badge.style.display = 'block';
+                }
+
+                if (!models.length) {
                     listEl.innerHTML = '';
                     document.getElementById('modelListEmpty').style.display = 'block';
                     return;
                 }
 
-                // Fill dropdown and table
+                // Build table rows
                 let tableHtml = '';
-                models.forEach((m, index) => {
-                    console.log('Processing model:', index, m);
-
-                    if (!m || typeof m !== 'object') {
-                        console.warn('Invalid model at index', index);
-                        return;
-                    }
-
-                    // Add to dropdown
-                    const opt = document.createElement('option');
-                    opt.value = m.id || m.name || `model_${index}`;
-                    opt.textContent = (m.name || '未命名') + (m.enabled ? ' ✅' : ' ❌');
-                    select.appendChild(opt);
-
-                    // Add to table
-                    tableHtml += `<tr>
-                        <td>${m.name || '-'}</td>
-                        <td>${m.type || 'openai'}</td>
+                models.forEach((m) => {
+                    const isSelected = (m.id === selectedModel);
+                    const rowStyle = isSelected ? 'background:rgba(76,175,80,0.08);' : '';
+                    tableHtml += `<tr style="${rowStyle}">
+                        <td>${m.name || '-'}${isSelected ? ' <span style="color:var(--success);font-size:11px;">★ 当前</span>' : ''}</td>
+                        <td style="font-size:11px;color:var(--text2);max-width:180px;overflow:hidden;text-overflow:ellipsis;">${m.url || m.baseUrl || '-'}</td>
                         <td>${m.priority || 10}</td>
                         <td>${m.enabled ? '<span style="color:var(--success);">启用</span>' : '<span style="color:var(--danger);">禁用</span>'}</td>
                         <td>
-                            <button class="btn btn-sm" onclick="toggleModel('${(m.id || '').replace(/'/g, "\\' ")}')">${m.enabled ? '禁用' : '启用'}</button>
-                            <button class="btn btn-sm" onclick="testModelById('${(m.id || '').replace(/'/g, "\\' ")}')">测试</button>
+                            ${!isSelected && m.enabled ? `<button class="btn btn-sm btn-success" onclick="selectModel('${(m.id||'').replace(/'/g,"\\'")}')">选用</button> ` : ''}
+                            <button class="btn btn-sm" onclick="toggleModel('${(m.id||'').replace(/'/g,"\\'")}')">${m.enabled ? '禁用' : '启用'}</button>
+                            <button class="btn btn-sm" onclick="testModelById('${(m.id||'').replace(/'/g,"\\'")}')">测试</button>
                         </td>
                     </tr>`;
                 });
 
                 listEl.innerHTML = tableHtml;
                 document.getElementById('modelListEmpty').style.display = 'none';
-                showToast('模型列表已更新,共 ' + models.length + ' 个模型');
 
             } catch (e) {
                 console.error('loadModelList error:', e);
@@ -1273,7 +1374,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        provider: id,  // ✅ 修复：id → provider
+                        provider: id,
                         prompt: '你好，请介绍一下自己'
                     })
                 });
@@ -1285,6 +1386,26 @@
                 }
             } catch (e) {
                 showToast('测试失败: ' + e.message, 'error');
+            }
+        }
+
+        // 选用模型：同步到引擎 ai-providers.json
+        async function selectModel(id) {
+            try {
+                const r = await fetch(API + '/api/models/select', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ provider: id })
+                });
+                const d = await r.json();
+                if (d.success) {
+                    showToast(d.message || '模型已选用，引擎配置已同步');
+                    loadModelList();  // 刷新列表
+                } else {
+                    showToast(d.message || '选用失败', 'error');
+                }
+            } catch (e) {
+                showToast('选用失败: ' + e.message, 'error');
             }
         }
 
@@ -1305,6 +1426,241 @@
         // Fix: product/:id route for __all__
         // The product list endpoint should work, but for the full data we need a different approach
         // Let's add a fallback
+
+        // ── Multi-Platform Publish ─────────────────────
+        async function publishToMultiplePlatforms(title, content) {
+            // If arguments are provided, use them; otherwise read from form
+            if (!title) title = document.getElementById('pubTitle').value.trim();
+            if (!content) content = document.getElementById('pubContent').value.trim();
+            
+            if (!title || !content) return showToast('请填写标题和内容', 'error');
+            
+            // Get selected platforms
+            const platforms = Array.from(document.querySelectorAll('input[name="pubPlatform"]:checked')).map(cb => cb.value);
+            if (platforms.length === 0) return showToast('请至少选择一个平台', 'error');
+            
+            showToast(`开始发布到 ${platforms.length} 个平台...`);
+            
+            const results = [];
+            
+            for (const platform of platforms) {
+                try {
+                    let result;
+                    switch (platform) {
+                        case 'cms':
+                            result = await publishToCMSOnly(title, content);
+                            break;
+                        case 'wechat':
+                            result = await publishToWechat(title, content);
+                            break;
+                        case 'xiaohongshu':
+                            result = await publishToXiaohongshu(title, content);
+                            break;
+                        case 'douyin':
+                            result = await publishToDouyin(title, content);
+                            break;
+                    }
+                    results.push({ platform, success: true, data: result });
+                } catch (e) {
+                    results.push({ platform, success: false, error: e.message });
+                }
+            }
+            
+            // Show results
+            const successCount = results.filter(r => r.success).length;
+            const failCount = results.filter(r => !r.success).length;
+            
+            showToast(`发布完成: ${successCount}成功 / ${failCount}失败`);
+            
+            if (successCount > 0) {
+                sessionStats.published += successCount;
+                updateStats();
+            }
+        }
+
+        async function publishToCMSOnly(title, content) {
+            // 支持两种调用方式：传参数 / 读表单
+            if (!title || !content) {
+                title = document.getElementById('pubTitle').value.trim();
+                content = document.getElementById('pubContent').value.trim();
+                if (!title || !content) throw new Error('缺少标题或内容');
+            }
+            
+            // 读取平台选择
+            const toWechat = document.getElementById('pubPlatformWechat')?.checked;
+            const toCMS = document.getElementById('pubPlatformCMS')?.checked;
+            
+            const r = await fetch(API + '/api/cms/push', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title,
+                    content,
+                    categoryId: parseInt(document.getElementById('pubCategory').value) || undefined,
+                    source: document.getElementById('pubSource').value || 'WorkBuddy',
+                    toWechat: !!toWechat  // 同步推微信草稿箱
+                })
+            });
+            const d = await r.json();
+            if (d.success) {
+                const result = { articleId: d.data?.articleId };
+                if (d.data?.wechat?.articleId) {
+                    result.wechatArticleId = d.data.wechat.articleId;
+                    showToast('CMS+微信草稿箱发布成功！');
+                } else if (toWechat) {
+                    showToast('CMS发布成功（微信未配置或失败）', 'error');
+                }
+                return result;
+            } else {
+                throw new Error(d.message || 'CMS发布失败');
+            }
+        }
+
+        async function publishToWechat(title, content) {
+            try {
+                const r = await fetch(API + '/api/publish/wechat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, content })
+                });
+                const d = await r.json();
+                if (d.success) {
+                    showToast('微信公众号发布成功！');
+                    return { platform: 'wechat', articleId: d.data?.articleId };
+                } else {
+                    throw new Error(d.message || '微信发布失败');
+                }
+            } catch (e) {
+                showToast('微信发布失败: ' + e.message, 'error');
+                throw e;
+            }
+        }
+
+        async function publishToXiaohongshu(title, content) {
+            try {
+                const r = await fetch(API + '/api/publish/xiaohongshu', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, content })
+                });
+                const d = await r.json();
+                if (d.success) {
+                    showToast('小红书发布成功！');
+                    return { platform: 'xiaohongshu', articleId: d.data?.articleId };
+                } else {
+                    throw new Error(d.message || '小红书发布失败');
+                }
+            } catch (e) {
+                showToast('小红书发布失败: ' + e.message, 'error');
+                throw e;
+            }
+        }
+
+        async function publishToDouyin(title, content) {
+            try {
+                const r = await fetch(API + '/api/publish/douyin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, content })
+                });
+                const d = await r.json();
+                if (d.success) {
+                    showToast('抖音发布成功！');
+                    return { platform: 'douyin', articleId: d.data?.articleId };
+                } else {
+                    throw new Error(d.message || '抖音发布失败');
+                }
+            } catch (e) {
+                showToast('抖音发布失败: ' + e.message, 'error');
+                throw e;
+            }
+        }
+
+        // ═══ AI自动生成并发布 ═══
+        async function runAutoGenerate() {
+            const logEl = document.getElementById('autoGenerateLog');
+            logEl.style.display = 'block';
+            logEl.innerHTML = '🚀 提交AI生成任务...';
+            
+            const model = document.getElementById('autoModel').value;
+            const style = document.getElementById('autoStyle').value;
+            const words = document.getElementById('autoWords').value;
+            const keywords = document.getElementById('autoKeywords').value.trim();
+            const toWechat = document.getElementById('pubToWechat').checked;
+            const toCMS = document.getElementById('pubToCMS').checked;
+            
+            try {
+                const r = await fetch(API + '/api/publish/auto-generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model, style, words, keywords, toWechat, toCMS })
+                });
+                const d = await r.json();
+                
+                if (d.success && d.taskId) {
+                    // 轮询任务状态
+                    logEl.innerHTML = '⏳ AI正在生成文章，请稍候...';
+                    pollTask(d.taskId, logEl);
+                } else {
+                    logEl.innerHTML = `<div style="color:var(--danger);">❌ 提交失败: ${d.message}</div>`;
+                }
+            } catch (e) {
+                logEl.innerHTML = `<div style="color:var(--danger);">❌ 请求失败: ${e.message}</div>`;
+            }
+        }
+        
+        async function pollTask(taskId, logEl) {
+            try {
+                const r = await fetch(API + '/api/publish/auto-generate/' + taskId);
+                const d = await r.json();
+                
+                if (d.status === 'running') {
+                    logEl.innerHTML = `⏳ AI正在生成文章... (${Math.round((Date.now() - d.startTime) / 1000)}s)`;
+                    setTimeout(() => pollTask(taskId, logEl), 5000);
+                } else if (d.status === 'completed') {
+                    const res = d.result;
+                    logEl.innerHTML = `
+                        <div style="color:var(--success);margin-bottom:8px;">✅ 生成${res.published ? '并发布' : ''}成功！</div>
+                        <div>📝 标题: ${res.title}</div>
+                        <div>📊 字数: ${res.wordCount}</div>
+                        <div>🏷️ 分类: ${res.category}</div>
+                        ${res.mediaId ? `<div>📄 MediaID: ${res.mediaId}</div>` : ''}
+                        <div>⏱️ 耗时: ${Math.round(res.elapsedMs/1000)}s</div>
+                        <div style="margin-top:8px;"><a href="https://mp.weixin.qq.com" target="_blank">🔗 微信后台查看</a></div>
+                    `;
+                    showToast('AI生成成功！');
+                } else {
+                    logEl.innerHTML = `<div style="color:var(--danger);">❌ 生成失败: ${d.error || '未知错误'}</div>`;
+                }
+            } catch (e) {
+                logEl.innerHTML = `<div style="color:var(--danger);">❌ 轮询失败: ${e.message}</div>`;
+            }
+        }
+        
+        async function previewTopics() {
+            try {
+                const r = await fetch(API + '/api/publish/topics');
+                const d = await r.json();
+                
+                if (d.success) {
+                    const topicList = d.data.topics || d.data;
+                    const topics = (Array.isArray(topicList) ? topicList : []).slice(0, 20).map((t, i) => 
+                        `<div style="padding:4px 0;border-bottom:1px solid var(--border);">${i+1}. ${t.topic} <span style="color:var(--text2);">(${t.category})</span></div>`
+                    ).join('');
+                    
+                    document.getElementById('autoGenerateLog').style.display = 'block';
+                    document.getElementById('autoGenerateLog').innerHTML = `
+                        <div style="font-weight:600;margin-bottom:8px;">📋 话题库（前20条）</div>
+                        ${topics}
+                        <div style="margin-top:8px;color:var(--text2);">共 ${(Array.isArray(topicList) ? topicList : []).length} 条话题</div>
+                    `;
+                } else {
+                    showToast('加载话题库失败: ' + d.message, 'error');
+                }
+            } catch (e) {
+                showToast('请求失败: ' + e.message, 'error');
+            }
+        }
     </script>
 </body>
 </html>

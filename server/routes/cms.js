@@ -36,26 +36,56 @@ router.get('/articles', async (req, res) => {
     }
 });
 
-// ── 推送文章 ─────────────────────────────────────
+// ── 推送文章（支持同步微信草稿箱） ─────────────────────────────────────
+async function pushWechatDraft(title, content, thumbMediaId) {
+    try {
+        const path = require('path');
+        const pluginPath = path.join(__dirname, '../../scripts/multi-platform-publisher.cjs');
+        const { MultiPlatformPublisher } = require(pluginPath);
+        const wechatConfig = {
+            appId: process.env.WECHAT_APP_ID,
+            appSecret: process.env.WECHAT_APP_SECRET,
+            thumbMediaId: thumbMediaId || process.env.WECHAT_THUMB_MEDIA_ID,
+            author: 'WorkBuddy'
+        };
+        const publisher = new MultiPlatformPublisher({ wechat: wechatConfig });
+        await publisher.init();
+        return await publisher.publishToWechat({ title, content, description: content.substring(0, 120) + '...' });
+    } catch (e) {
+        console.error('[CMS→微信] 推送失败:', e.message);
+        return { success: false, error: e.message };
+    }
+}
+
 router.post('/push', async (req, res) => {
     try {
-        const { title, content, categoryId, status, source } = req.body;
+        const { title, content, categoryId, status, source, toWechat, thumbMediaId, thumbUrl } = req.body;
         
         if (!title || !content) {
             return res.status(400).json({ success: false, message: '缺少标题或内容' });
         }
         
-        const result = await cms.pushArticle({ title, content, categoryId, status, source });
+        // 1. 推 CMS
+        const cmsResult = await cms.pushArticle({ title, content, categoryId, status, source });
         
-        if (result.success) {
-            res.json({ 
-                success: true, 
-                message: '发布成功',
-                data: result 
-            });
-        } else {
-            res.status(500).json({ success: false, message: result.message || '推送失败' });
+        if (!cmsResult.success) {
+            return res.status(500).json({ success: false, message: 'CMS推送失败: ' + cmsResult.message });
         }
+        
+        // 2. 同步推微信
+        let wechatResult = null;
+        if (toWechat) {
+            wechatResult = await pushWechatDraft(title, content, thumbMediaId || process.env.WECHAT_THUMB_MEDIA_ID);
+        }
+        
+        res.json({
+            success: true,
+            message: wechatResult?.success ? 'CMS+微信发布成功' : 'CMS发布成功',
+            data: {
+                cms: { articleId: cmsResult.articleId },
+                wechat: wechatResult?.success ? { articleId: wechatResult.articleId, status: 'draft' } : null
+            }
+        });
     } catch (e) {
         res.status(500).json({ success: false, message: e.message });
     }

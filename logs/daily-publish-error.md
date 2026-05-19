@@ -1,34 +1,46 @@
-# 微信公众号发布错误日志 - 2026-05-16
+# 每日发布错误日志
 
-## 发布时间
-2026-05-16 08:30:00
+## 2026-05-19 08:30
 
-## 错误信息
-进程在执行过程中被 SIGKILL 信号终止，发布未完成。
+### 多平台发布模块错误
 
-## 可能原因
-1. 系统资源不足（内存/CPU）
-2. 进程被用户或系统强制终止
-3. AI API 调用失败导致进程挂起后被清理
+**错误信息：**
+```
+⚠️  多平台发布异常: Cannot find module 'yargs/yargs'
+Require stack:
+- D:\.qclaw\workspace\wechat-publisher-plugin\scripts\video-platforms\multi-platform-publisher.js
+- D:\.qclaw\workspace\wechat-publisher-plugin\scripts\enhanced-engine.js
+```
 
-## 执行状态
-- ✅ 热点分析完成
-- ✅ 话题选择完成: GPT-6发布：OpenAI的又一次飞跃，但这次和以前有什么不同？
-- ✅ 文章生成完成 (5737字)
-- ✅ 内容安全检查通过 (安全分: 97/100)
-- ✅ 摘要生成完成
-- ❌ 缩略图匹配阶段进程被终止
-- ❌ 未到达发布阶段
+**影响范围：**
+- 主任务（微信公众号发布）：✅ 成功
+- 多平台发布（视频平台）：❌ 失败
 
-## 建议
-1. 检查系统资源使用情况
-2. 检查是否有其他进程干扰
-3. 可以尝试重新手动运行发布命令
-4. 检查API密钥配置（deepseek密钥无效）
+**解决方案：**
+需要安装缺少的依赖模块 `yargs`：
+```bash
+cd D:\.qclaw\workspace\wechat-publisher-plugin
+npm install yargs
+```
 
-## 技术详情
-- 工作目录: D:\.qclaw\workspace\wechat-publisher-plugin\scripts
-- 执行命令: node enhanced-engine.js
-- 退出信号: SIGKILL
-- 生成文章: 有 (5737字)
-- 生成缩略图: thumb_1778891963419.jpg
+---
+
+## 发布成功详情
+
+**文章信息：**
+- 标题：腾讯狂拿16项评测第一的本质：具身智能实现全链路一体化迈入实用阶段
+- 字数：5864 字
+- 分类：具身智能
+- 话题ID：t009
+- MediaID：fOSSI4rB_2kncg_EYxVB_5AJ9kVA27IjLG5tPdB9U1hpVqEU3KKLPnLYc5-ui0_y
+- 内容安全分：100/100
+- CMS入库ID：1841
+
+**AI模型使用：**
+- 摘要生成：volcengine-plan (ark-code-latest) - 成功
+- 文章写作：volcengine-plan (ark-code-latest) - 成功
+- deepseek：失败（API key 无效）
+
+**缩略图：**
+- 已匹配并上传成功
+- MediaID：fOSSI4rB_2kncg_EYxVB_8fSSAjFNmRxWHvoMoobkg1uHM-DjkTNYd8t6qFBJVIv

@@ -138,6 +138,66 @@ router.delete('/:provider', (req, res) => {
   }
 });
 
+// ── 同步选中模型到插件引擎 ───────────────────────────────
+// plugins/models.js → plugins/config/ai-providers.json
+function syncSelectedModelToPlugin(provider, modelConfig) {
+    try {
+        const pluginAiPath = path.join('D:\\', '.qclaw', 'workspace', 'wechat-publisher-plugin', 'config', 'ai-providers.json');
+        if (!fs.existsSync(pluginAiPath)) return false;
+        
+        const aiConfig = JSON.parse(fs.readFileSync(pluginAiPath, 'utf8'));
+        
+        // 更新 selected provider 的 priority=1，其他全推高
+        let found = false;
+        aiConfig.providers.forEach(p => {
+            if (p.name === provider) {
+                p.enabled = true;
+                p.priority = 1;
+                p.baseUrl = modelConfig.url || p.baseUrl;
+                p.apiKey = modelConfig.key;
+                p.models = [modelConfig.model || p.models?.[0] || 'gpt-4o'];
+                found = true;
+                console.log(`✅ 同步选中模型到插件: ${provider}`);
+            } else {
+                p.priority = Math.max(p.priority, 99);
+            }
+        });
+        
+        if (found) {
+            fs.writeFileSync(pluginAiPath, JSON.stringify(aiConfig, null, 2), 'utf8');
+            return true;
+        }
+        return false;
+    } catch (e) {
+        console.error('❌ 同步插件配置失败:', e.message);
+        return false;
+    }
+}
+
+// POST /api/models/select - 选中的模型，同步到引擎配置
+router.post('/select', (req, res) => {
+    try {
+        const { provider } = req.body;
+        if (!provider) return res.status(400).json({ success: false, error: 'provider不能为空' });
+        
+        const models = loadModels();
+        const cfg = models[provider];
+        if (!cfg) return res.status(404).json({ success: false, error: '模型不存在' });
+        if (!cfg.enabled) return res.status(400).json({ success: false, error: '模型未启用' });
+        
+        // 标记 selected
+        Object.keys(models).forEach(k => models[k].selected = (k === provider));
+        saveModels(models);
+        
+        // 同步到插件 ai-providers.json
+        const synced = syncSelectedModelToPlugin(provider, cfg);
+        
+        res.json({ success: true, message: `已选择 ${cfg.name}，${synced ? '已同步到引擎配置' : '插件同步失败(继续可用)'}`, selected: provider });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 // POST /api/models/test - 测试模型连接
 router.post('/test', async (req, res) => {
   try {
