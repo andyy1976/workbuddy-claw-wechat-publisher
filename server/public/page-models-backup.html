@@ -1,0 +1,26 @@
+id="page-models">
+                    <div class="card mb-md">
+                        <div class="card-header">
+                            <span class="card-title">模型配置</span>
+                            <button class="btn btn-sm btn-success" onclick="loadModelList()">刷新列表</button>
+                        </div>
+                        <div id="currentModelBadge" style="padding:8px 16px; background:var(--surface2); border-radius:6px; margin-bottom:12px; font-size:14px; display:none;">
+                            当前使用: <strong id="currentModelName">-</strong>
+                        </div>
+                        <div class="table-responsive">
+                        <table class="data-table" id="modelTable">
+                            <thead>
+                                <tr>
+                                    <th>模型名称</th>
+                                    <th>API URL</th>
+                                    <th>优先级</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modelList">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="modelListEmpty" style="display:none; padding:20px; text-align:center; color:var(--text2);">暂无配置的模型,请在下方添加。</div>
+                    </div>

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CMS管理 - WorkBuddy</title>
+  <link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <h1>🚀 WorkBuddy</h1>
+        <p>内容数字员工平台 v6.0</p>
+      </div>
+      <nav class="sidebar-nav" id="mainNav"></nav>
+      <div class="sidebar-footer">
+        <div class="status"><span class="dot"></span><span id="serverStatus">服务运行中</span></div>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <h2>🔗 CMS管理</h2>
+        <div class="topbar-actions">
+          <button class="btn btn-outline" onclick="healthCheck()">健康检查</button>
+          <button class="btn btn-primary" onclick="loadCMS()"><span>+</span> 刷新</button>
+        </div>
+      </header>
+
+      <div class="content">
+
+        <!-- 统计卡片 -->
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="label">栏目总数</div>
+            <div class="value" id="cmsCatCount">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">数据来源</div>
+            <div class="value" id="cmsSource" style="font-size:16px;">检查中...</div>
+          </div>
+        </div>
+
+        <!-- 栏目列表 -->
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header"><span class="card-title">📂 CMS栏目映射</span></div>
+          <div id="cmsCategories"></div>
+          <div id="cmsEmpty" style="display:none; padding:24px; text-align:center; color:var(--text2);">暂无栏目数据</div>
+        </div>
+
+        <!-- 推送文章 -->
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header"><span class="card-title">📤 推送文章到CMS</span></div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label class="form-label">标题</label>
+            <input class="form-input" id="cmsPushTitle" placeholder="输入文章标题...">
+          </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label class="form-label">内容 (支持 Markdown)</label>
+            <textarea class="form-input" id="cmsPushContent" rows="8" placeholder="输入文章内容 (Markdown格式)..."></textarea>
+          </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label class="form-label">目标栏目</label>
+            <select class="form-select" id="cmsPushCategory">
+              <option value="">自动匹配</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label class="flex-row gap-sm" style="align-items:center;cursor:pointer;">
+              <input type="checkbox" id="cmsToWechat" checked> 同步推送到微信草稿箱
+            </label>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-success" onclick="pushArticle()">📤 推送文章</button>
+            <button class="btn btn-outline" onclick="matchCategory()">🎯 智能匹配栏目</button>
+          </div>
+          <div id="cmsPushResult" style="display:none; margin-top:12px; padding:12px; background:var(--bg); border-radius:8px; font-size:13px; white-space:pre-wrap;"></div>
+        </div>
+
+        <!-- 文章列表 -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📄 已发布文章</span>
+            <button class="btn btn-sm btn-outline" onclick="loadArticles()">刷新</button>
+          </div>
+          <table class="data-table" id="cmsArticleTable">
+            <thead><tr><th>ID</th><th>标题</th><th>栏目</th><th>来源</th><th>时间</th></tr></thead>
+            <tbody id="cmsArticleList"><tr><td colspan="5" style="text-align:center;color:var(--text2);padding:16px;">点击"刷新"加载文章列表</td></tr></tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="/js/common.js"></script>
+  <script>
+    // ── 健康检查 ─────────────────────────────────
+    async function healthCheck() {
+      try {
+        var r = await fetch('/api/health');
+        var d = await r.json();
+        document.getElementById('serverStatus').textContent = '运行中 (' + Math.round(d.uptime) + 's)';
+        showToast('✅ 服务正常 v' + d.version);
+      } catch (e) {
+        document.getElementById('serverStatus').textContent = '离线';
+        showToast('❌ 服务未启动', 'error');
+      }
+    }
+
+    // ── Toast ────────────────────────────────────
+    function showToast(msg, type) {
+      type = type || 'success';
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast ' + type;
+      setTimeout(function() { t.classList.add('show'); }, 10);
+      setTimeout(function() { t.classList.remove('show'); }, 3500);
+    }
+
+    // ── 加载CMS栏目（对齐旧版逻辑） ───────────────
+    async function loadCMS() {
+      try {
+        var r = await fetch(API + '/api/cms/categories');
+        var d = await r.json();
+
+        console.log('[cms] categories API:', d);
+
+        // 后端返回: { success:true, data: { "111":{name,keywords}, "112":{...} }, source:"database|fallback" }
+        var cats = d.data || {};
+        var catKeys = Object.keys(cats).filter(function(k) { return k !== '_selected'; });
+
+        // 统计
+        document.getElementById('cmsCatCount').textContent = catKeys.length;
+
+        // 来源状态
+        var sourceEl = document.getElementById('cmsSource');
+        if (d.source === 'database') {
+          sourceEl.innerHTML = '<span style="color:var(--success);">✅ 数据库连接正常</span>';
+        } else if (d.source === 'fallback') {
+          sourceEl.innerHTML = '<span style="color:#f0a500;">⚠️ 使用本地配置（数据库不可用）</span>';
+        } else if (d.source === 'config') {
+          sourceEl.textContent = '✅ 正常';
+        } else {
+          sourceEl.innerHTML = '<span style="color:var(--danger);">❌ 离线</span>';
+        }
+
+        // 渲染表格
+        var container = document.getElementById('cmsCategories');
+        var emptyEl = document.getElementById('cmsEmpty');
+
+        if (!catKeys.length) {
+          container.innerHTML = '';
+          emptyEl.style.display = 'block';
+          return;
+        }
+        emptyEl.style.display = 'none';
+
+        var tableHtml = '<table class="data-table"><thead><tr><th>ID</th><th>栏目名</th><th>关键词</th></tr></thead><tbody>';
+        catKeys.forEach(function(id) {
+          var c = cats[id];
+          var kwStr = (c.keywords && Array.isArray(c.keywords)) ? c.keywords.join(', ') : '-';
+          tableHtml += '<tr>'
+            + '<td><strong>' + id + '</strong></td>'
+            + '<td>' + (c.name || '-') + '</td>'
+            + '<td style="font-size:12px;color:var(--text2);max-width:300px;overflow:hidden;text-overflow:ellipsis;" title="' + kwStr + '">' + kwStr + '</td>'
+            + '</tr>';
+        });
+        tableHtml += '</tbody></table>';
+        container.innerHTML = tableHtml;
+
+        // 填充推送栏目的下拉框
+        var selectEl = document.getElementById('cmsPushCategory');
+        selectEl.innerHTML = '<option value="">自动匹配</option>';
+        catKeys.forEach(function(id) {
+          var opt = document.createElement('option');
+          opt.value = id;
+          opt.textContent = cats[id].name || id;
+          selectEl.appendChild(opt);
+        });
+
+        console.log('[cms] Loaded', catKeys.length, 'categories, source:', d.source);
+
+      } catch (e) {
+        console.error('[cms] loadCMS error:', e);
+        document.getElementById('cmsSource').innerHTML = '<span style="color:var(--danger);">❌ 连接失败</span>';
+        document.getElementById('cmsCategories').innerHTML = '';
+        document.getElementById('cmsEmpty').style.display = 'block';
+        document.getElementById('cmsEmpty').textContent = '加载失败: ' + e.message;
+        showToast('加载CMS失败: ' + e.message, 'error');
+      }
+    }
+
+    // ── 推送文章 ─────────────────────────────────
+    async function pushArticle() {
+      var title = document.getElementById('cmsPushTitle').value.trim();
+      var content = document.getElementById('cmsPushContent').value.trim();
+      if (!title) return showToast('请输入文章标题', 'error');
+      if (!content) return showToast('请输入文章内容', 'error');
+
+      var resultDiv = document.getElementById('cmsPushResult');
+      resultDiv.style.display = 'block';
+      resultDiv.textContent = '⏳ 正在推送...';
+
+      try {
+        var r = await fetch(API + '/api/cms/push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: title,
+            content: content,
+            categoryId: document.getElementById('cmsPushCategory').value ? parseInt(document.getElementById('cmsPushCategory').value) : null,
+            status: 1,
+            source: 'WorkBuddy',
+            toWechat: document.getElementById('cmsToWechat').checked
+          })
+        });
+        var d = await r.json();
+        if (d.success) {
+          var msg = d.message || '推送成功';
+          if (d.data && d.data.cms) msg += ' (CMS ID: ' + d.data.cms.articleId + ')';
+          if (d.data && d.data.wechat) msg += ' | 微信草稿已创建';
+          resultDiv.innerHTML = '<span style="color:var(--success);">✅ ' + msg + '</span>';
+          showToast('✅ 文章推送成功！');
+          // 清空表单
+          document.getElementById('cmsPushTitle').value = '';
+          document.getElementById('cmsPushContent').value = '';
+          // 刷新文章列表
+          loadArticles();
+        } else {
+          resultDiv.innerHTML = '<span style="color:var(--danger);">❌ ' + (d.message || '推送失败') + '</span>';
+          showToast(d.message || '推送失败', 'error');
+        }
+      } catch (e) {
+        resultDiv.innerHTML = '<span style="color:var(--danger);">❌ ' + e.message + '</span>';
+        showToast('推送失败: ' + e.message, 'error');
+      }
+    }
+
+    // ── 智能匹配栏目 ─────────────────────────────
+    async function matchCategory() {
+      var title = document.getElementById('cmsPushTitle').value.trim();
+      var content = document.getElementById('cmsPushContent').value.trim();
+      if (!title) return showToast('请先输入标题再匹配', 'error');
+
+      try {
+        var r = await fetch(API + '/api/cms/match-category', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: title, content: content })
+        });
+        var d = await r.json();
+        if (d.success && d.data) {
+          document.getElementById('cmsPushCategory').value = String(d.data.id);
+          showToast('🎯 匹配到: ' + d.data.name + ' (ID:' + d.data.id + ', 分数:' + (d.data.score||0) + ')');
+        } else {
+          showToast(d.message || '匹配失败', 'error');
+        }
+      } catch (e) {
+        showToast('匹配失败: ' + e.message, 'error');
+      }
+    }
+
+    // ── 加载文章列表 ─────────────────────────────
+    async function loadArticles() {
+      var tbody = document.getElementById('cmsArticleList');
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:16px;"><span class="spinner-inline"></span> 加载中...</td></tr>';
+
+      try {
+        var r = await fetch(API + '/api/cms/articles?page=1&pageSize=20');
+        var d = await r.json();
+        console.log('[cms] articles:', d);
+
+        if (d.success && d.data && Array.isArray(d.data)) {
+          if (!d.data.length) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:16px;">暂无已发布文章</td></tr>';
+            return;
+          }
+          tbody.innerHTML = d.data.map(function(a) {
+            return '<tr>'
+              + '<td>' + a.id + '</td>'
+              + '<td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;" title="' + (a.title||'') + '">' + (a.title||'-') + '</td>'
+              + '<td>' + (a.typeid||'-') + '</td>'
+              + '<td>' + (a.source||'-') + '</td>'
+              + '<td style="font-size:12px;color:var(--text2);">' + (a.addtime||'-') + '</td>'
+              + '</tr>';
+          }).join('');
+        } else {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger);padding:16px;">' + (d.message || '加载失败') + '</td></tr>';
+        }
+      } catch (e) {
+        console.error('[cms] loadArticles error:', e);
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger);padding:16px;">请求失败: ' + e.message + '</td></tr>';
+      }
+    }
+
+    // ── 页面加载 ─────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function() {
+      loadCMS();
+      healthCheck();
+    });
+  </script>
+</body>
+</html>

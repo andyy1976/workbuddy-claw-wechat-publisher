@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>产品数据中心</title>
+  <link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+  <div class="app">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <h1>🚀 WorkBuddy</h1>
+                <p>内容数字员工平台 v6.0</p>
+            </div>
+            <nav class="sidebar-nav" id="mainNav"></nav>
+            <div class="sidebar-footer">
+                <div class="status"><span class="dot"></span><span id="serverStatus">服务运行中</span></div>
+            </div>
+        </aside>
+    <div class="main">
+      <header class="topbar">
+        <h2>🏭 产品数据中心</h2>
+        <div class="topbar-actions"><button class="btn btn-outline" onclick="healthCheck()">健康检查</button></div>
+      </header>
+      <div class="content">
+        <div class="section-tabs">
+          <button class="tab-btn active" data-tab="overview" onclick="switchProductTab('overview')">概览</button>
+          <button class="tab-btn" data-tab="bom" onclick="switchProductTab('bom')">BOM数据</button>
+          <button class="tab-btn" data-tab="process" onclick="switchProductTab('process')">工序数据</button>
+          <button class="tab-btn" data-tab="quality" onclick="switchProductTab('quality')">质量标准</button>
+        </div>
+
+        <!-- 概览标签页 -->
+        <div class="tab-pane active" id="tab-overview">
+        <div class="stats-row">
+          <div class="stat-card"><span class="stat-value" id="bomCount">0</span><span class="stat-label">BOM数量</span></div>
+          <div class="stat-card"><span class="stat-value" id="procCount">0</span><span class="stat-label">工序数量</span></div>
+          <div class="stat-card"><span class="stat-value" id="qualCount">0</span><span class="stat-label">质量项目</span></div>
+          <div class="stat-card"><span class="stat-value" id="advCount">0</span><span class="stat-label">产品优势</span></div>
+        </div>
+        <div class="card">
+          <h3>产品优势</h3>
+          <ul id="productAdvantages" class="list-group"></ul>
+        </div>
+        </div>
+
+        <!-- BOM数据标签页 -->
+        <div class="tab-pane" id="tab-bom">
+        <div class="card">
+          <h3>BOM数据</h3>
+          <table id="bomTable" class="data-table">
+            <thead><tr><th>编码</th><th>名称</th><th>规格</th><th>数量</th><th>单位</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        </div>
+
+        <!-- 工序数据标签页 -->
+        <div class="tab-pane" id="tab-process">
+        <div class="card">
+          <h3>工序数据</h3>
+          <table id="processTable" class="data-table">
+            <thead><tr><th>序号</th><th>工序名称</th><th>工时</th><th>设备</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        </div>
+
+        <!-- 质量标准标签页 -->
+        <div class="tab-pane" id="tab-quality">
+        <div class="card">
+          <h3>质量标准</h3>
+          <table id="qualityTable" class="data-table">
+            <thead><tr><th>项目</th><th>标准</th><th>检测方法</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="toast" class="toast"></div>
+  <script src="/js/common.js"></script>
+  <script>
+    // 标签页切换
+    function switchProductTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabName));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === 'tab-' + tabName));
+    }
+
+    async function loadProductData() {
+      try {
+        const res = await fetch('/api/product/__all__');
+        const data = await res.json();
+        document.getElementById('bomCount').textContent = data.bom?.length || 0;
+        document.getElementById('procCount').textContent = data.processes?.length || 0;
+        document.getElementById('qualCount').textContent = data.quality?.length || 0;
+        document.getElementById('advCount').textContent = data.advantages?.length || 0;
+        if (data.advantages) {
+          document.getElementById('productAdvantages').innerHTML = data.advantages.map(a => `<li>${a}</li>`).join('');
+        }
+        if (data.bom) {
+          document.getElementById('bomTable').querySelector('tbody').innerHTML = data.bom.map(b => 
+            `<tr><td>${b.code||''}</td><td>${b.name||''}</td><td>${b.spec||''}</td><td>${b.qty||''}</td><td>${b.unit||''}</td></tr>`
+          ).join('');
+        }
+        if (data.processes) {
+          document.getElementById('processTable').querySelector('tbody').innerHTML = data.processes.map(p =>
+            `<tr><td>${p.seq||''}</td><td>${p.name||''}</td><td>${p.time||''}</td><td>${p.equipment||''}</td></tr>`
+          ).join('');
+        }
+        if (data.quality) {
+          document.getElementById('qualityTable').querySelector('tbody').innerHTML = data.quality.map(q =>
+            `<tr><td>${q.item||''}</td><td>${q.standard||''}</td><td>${q.method||''}</td></tr>`
+          ).join('');
+        }
+      } catch (e) {
+        showToast('加载数据失败: ' + e.message, 'error');
+      }
+    }
+    document.addEventListener('DOMContentLoaded', loadProductData);
+  </script>
+</body>
+</html>

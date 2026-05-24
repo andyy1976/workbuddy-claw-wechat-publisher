@@ -1,0 +1,378 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>竞品对比 - WorkBuddy</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <style>
+        .matrix-table { width:100%; border-collapse:collapse; margin-top:16px; }
+        .matrix-table th, .matrix-table td { padding:10px 14px; border:1px solid var(--border); font-size:13px; text-align:left; }
+        .matrix-table th { background:var(--surface2); color:var(--accent2); font-weight:600; }
+        .matrix-table tr:hover td { background:var(--bg); }
+        .advantage-ours { color:var(--success); font-weight:600; }
+        .advantage-theirs { color:var(--danger); }
+        .advantage-tie { color:var(--warning); }
+        
+        .copy-card { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:16px; margin-bottom:12px; }
+        .copy-card h4 { font-size:14px; color:var(--accent2); margin-bottom:8px; }
+        .copy-card p { font-size:13px; line-height:1.8; color:var(--text2); }
+        
+        .competitor-card { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; }
+        .competitor-name { font-weight:600; font-size:14px; }
+        .competitor-specs { font-size:12px; color:var(--text2); margin-top:4px; }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <h1>🚀 WorkBuddy</h1>
+                <p>内容数字员工平台 v6.0</p>
+            </div>
+            <nav class="sidebar-nav" id="mainNav"></nav>
+            <div class="sidebar-footer">
+                <div class="status"><span class="dot"></span><span id="serverStatus">服务运行中</span></div>
+            </div>
+        </aside>
+
+        <div class="main">
+            <header class="topbar">
+                <h2>⚔️ 竞品对比矩阵</h2>
+                <div class="topbar-actions">
+                    <button class="btn btn-sm" onclick="loadProducts()">🔄 刷新</button>
+                    <button class="btn btn-primary btn-sm" onclick="generateContent()">📝 生成营销内容</button>
+                </div>
+            </header>
+            <div class="content">
+                <!-- 产品选择 + 竞品管理 -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">选择产品 & 竞品</span>
+                        <button class="btn btn-sm btn-success" onclick="showAddCompetitor()">➕ 添加竞品</button>
+                    </div>
+                    <div class="form-row">
+                        <div style="flex:1;">
+                            <label class="form-label">选择产品</label>
+                            <select class="form-input" id="productSelect" onchange="onProductChange()"></select>
+                        </div>
+                        <div style="flex:1;">
+                            <label class="form-label">采集竞品 URL（自动提取参数）</label>
+                            <input type="text" class="form-input" id="competitorUrl" placeholder="https://competitor.com/product/...">
+                            <button class="btn btn-sm mt-md" onclick="scanCompetitor()">🔍 采集竞品参数</button>
+                        </div>
+                    </div>
+                    <div id="competitorList"></div>
+                </div>
+
+                <!-- 对比矩阵 -->
+                <div class="card" id="matrixCard" style="display:none;">
+                    <div class="card-header">
+                        <span class="card-title" id="matrixTitle">对比矩阵</span>
+                    </div>
+                    <div id="matrixTable"></div>
+                    <div id="advantageSummary" class="mt-md"></div>
+                </div>
+
+                <!-- 营销文案 -->
+                <div class="card" id="copyCard" style="display:none;">
+                    <div class="card-header">
+                        <span class="card-title">📝 AI 生成营销文案</span>
+                    </div>
+                    <div id="copyContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加竞品弹窗 -->
+    <div id="addCompModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:500px;">
+            <div style="font-size:16px;font-weight:600;margin-bottom:16px;">添加竞品</div>
+            <div class="form-label">竞品名称</div>
+            <input type="text" class="form-input mb-md" id="inpCompName" placeholder="SICK W16" style="width:100%;">
+            <div class="form-label">竞品 URL（可选）</div>
+            <input type="text" class="form-input mb-md" id="inpCompUrl" placeholder="https://..." style="width:100%;">
+            <div class="form-label">关键参数（JSON，可选）</div>
+            <textarea class="form-input mb-md" id="inpCompSpecs" rows="4" placeholder='{"检测精度":"0.05mm","响应时间":"10ms"}' style="width:100%;font-family:monospace;"></textarea>
+            <div class="flex-row mt-md">
+                <button class="btn btn-primary" onclick="saveCompetitor()">💾 保存</button>
+                <button class="btn" onclick="closeAddModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+    <script src="/js/common.js"></script>
+    <script>
+        API = '';
+        let currentProductId = null;
+        let catalogData = [];
+
+        async function loadProducts() {
+            try {
+                const r = await fetch(API + '/api/skills/smart-fetch/product/catalog');
+                const d = await r.json();
+                catalogData = d.data || [];
+                const sel = document.getElementById('productSelect');
+                sel.innerHTML = '<option value="">-- 选择产品 --</option>' +
+                    catalogData.map(p => '<option value="' + p.productId + '">' + p.name + ' (' + p.productId + ')</option>').join('');
+                if (currentProductId) sel.value = currentProductId;
+            } catch (e) { showToast('加载失败: ' + e.message, 'error'); }
+        }
+
+        function onProductChange() {
+            currentProductId = document.getElementById('productSelect').value;
+            if (currentProductId) loadCompetitors();
+        }
+
+        async function loadCompetitors() {
+            if (!currentProductId) return;
+            const product = catalogData.find(p => p.productId === currentProductId);
+            if (!product) return;
+            const competitors = product.competitors || [];
+            const listEl = document.getElementById('competitorList');
+            if (competitors.length === 0) {
+                listEl.innerHTML = '<div class="text-muted">暂无竞品，点击"添加竞品"开始</div>';
+                document.getElementById('matrixCard').style.display = 'none';
+                document.getElementById('copyCard').style.display = 'none';
+                return;
+            }
+            listEl.innerHTML = competitors.map((c, i) => 
+                '<div class="competitor-card">' +
+                    '<div>' +
+                        '<div class="competitor-name">' + c.name + '</div>' +
+                        '<div class="competitor-specs">' + Object.entries(c.specs||{}).map(function(kv) { return kv[0] + ':' + kv[1]; }).join(' | ') + '</div>' +
+                    '</div>' +
+                    '<button class="btn btn-sm btn-danger" onclick="removeCompetitor(' + i + ')">删除</button>' +
+                '</div>'
+            ).join('');
+            generateMatrix(product, competitors);
+        }
+
+        async function scanCompetitor() {
+            const url = document.getElementById('competitorUrl').value.trim();
+            if (!url) return showToast('请输入竞品 URL', 'error');
+            if (!currentProductId) return showToast('请先选择产品', 'error');
+            const resultEl = document.getElementById('competitorList');
+            resultEl.innerHTML = '<div class="text-muted">⏳ 正在采集竞品参数...</div>';
+            try {
+                const r = await fetch(API + '/api/skills/smart-fetch/competitor/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url, productId: currentProductId })
+                });
+                const d = await r.json();
+                if (d.success) {
+                    showToast('✅ 竞品参数采集成功', 'success');
+                    loadCompetitors();
+                } else {
+                    showToast('采集失败: ' + d.message, 'error');
+                }
+            } catch (e) {
+                showToast('请求失败: ' + e.message, 'error');
+            }
+        }
+
+        function generateMatrix(product, competitors) {
+            const allParams = new Set();
+            Object.keys(product.specs || {}).forEach(function(p) { allParams.add(p); });
+            (competitors || []).forEach(function(c) { Object.keys(c.specs || {}).forEach(function(p) { allParams.add(p); }); });
+            const params = Array.from(allParams);
+
+            const matrix = params.map(function(param) {
+                const ours = (product.specs || {})[param] || '-';
+                const compValues = (competitors || []).map(function(c) { return { name: c.name, value: (c.specs||{})[param] || '-' }; });
+                const numOurs = parseFloat(ours.toString().match(/[\d.]+/));
+                const isNumeric = !isNaN(numOurs);
+                let advantage = '无法对比';
+                if (isNumeric && compValues.some(function(c) { return c.value !== '-'; })) {
+                    const compNums = compValues.map(function(c) { return parseFloat(c.value.toString().match(/[\d.]+/)); });
+                    const maxComp = Math.max.apply(null, compNums.filter(function(n) { return !isNaN(n); }));
+                    if (numOurs > maxComp) advantage = '我们更强';
+                    else if (numOurs < maxComp) advantage = '竞品更强';
+                    else advantage = '各有优势';
+                }
+                return { parameter: param, ours: ours, competitors: compValues, advantage: advantage };
+            });
+
+            const headers = '<th>参数</th><th>我们</th>' + competitors.map(function(c) { return '<th>' + c.name + '</th>'; }).join('') + '<th>判定</th>';
+            const rows = matrix.map(function(r) {
+                const advClass = r.advantage === '我们更强' ? 'advantage-ours' : r.advantage === '竞品更强' ? 'advantage-theirs' : 'advantage-tie';
+                return '<tr>' +
+                    '<td><strong>' + r.parameter + '</strong></td>' +
+                    '<td class="' + (r.advantage === '我们更强' ? 'advantage-ours' : '') + '">' + r.ours + '</td>' +
+                    r.competitors.map(function(c) { return '<td>' + c.value + '</td>'; }).join('') +
+                    '<td class="' + advClass + '">' + r.advantage + '</td>' +
+                '</tr>';
+            }).join('');
+
+            document.getElementById('matrixTable').innerHTML = '<table class="matrix-table"><thead><tr>' + headers + '</tr></thead><tbody>' + rows + '</tbody></table>';
+
+            const advantages = matrix.filter(function(r) { return r.advantage === '我们更强'; }).map(function(r) { return r.parameter; });
+            const summaryEl = document.getElementById('advantageSummary');
+            if (advantages.length > 0) {
+                summaryEl.innerHTML = '<div style="color:var(--success);font-weight:600;">✅ 我们的优势项（' + advantages.length + '项）: ' + advantages.join('、') + '</div>';
+            } else {
+                summaryEl.innerHTML = '<div class="text-muted">暂无明显的优势项</div>';
+            }
+
+            document.getElementById('matrixTitle').textContent = product.name + ' vs ' + competitors.map(function(c) { return c.name; }).join(' / ') + ' 对比矩阵';
+            document.getElementById('matrixCard').style.display = 'block';
+        }
+
+        async function generateContent() {
+            if (!currentProductId) return showToast('请先选择产品', 'error');
+            const resultEl = document.getElementById('copyContent');
+            resultEl.innerHTML = '<div class="text-muted">⏳ 正在生成营销文案...</div>';
+            document.getElementById('copyCard').style.display = 'block';
+            try {
+                const r = await fetch(API + '/api/skills/smart-fetch/content/generate-from-product', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ productId: currentProductId, includeComparison: true })
+                });
+                const d = await r.json();
+                if (d.success) {
+                    const templates = d.data.templates || [];
+                    resultEl.innerHTML = templates.map(function(t) {
+                        const typeLabel = t.type === 'product_intro' ? '📝 产品介绍' : t.type === 'comparison' ? '⚔️ 竞品对比文案' : t.type === 'use_case' ? '💡 场景应用' : '📊 方法论分析';
+                        return '<div class="copy-card">' +
+                            '<h4>' + typeLabel + '</h4>' +
+                            '<div id="tplPreview_' + t.type + '" style="font-size:13px;line-height:1.8;color:var(--text2);max-height:200px;overflow:auto;margin:8px 0;padding:8px;background:var(--bg);border-radius:6px;">' + (t.content || '(无内容)') + '</div>' +
+                            '<div class="flex-row mt-md">' +
+                                '<button class="btn btn-sm btn-primary" onclick="publishTemplate(\'' + t.type + '\', \'cms\')">📤 推CMS</button>' +
+                                '<button class="btn btn-sm btn-success" onclick="publishTemplate(\'' + t.type + '\', \'wechat\')">💬 推微信草稿箱</button>' +
+                                '<button class="btn btn-sm" onclick="useTemplate(\'' + t.type + '\')">📋 复制全文</button>' +
+                            '</div>' +
+                        '</div>';
+                    }).join('');
+                    showToast('✅ 内容模板生成成功', 'success');
+                } else {
+                    resultEl.innerHTML = '<div style="color:var(--danger);">❌ ' + d.message + '</div>';
+                }
+            } catch (e) {
+                resultEl.innerHTML = '<div style="color:var(--danger);">❌ ' + e.message + '</div>';
+            }
+        }
+
+        function showAddCompetitor() {
+            if (!currentProductId) return showToast('请先选择产品', 'error');
+            document.getElementById('addCompModal').style.display = 'flex';
+        }
+
+        function closeAddModal() {
+            document.getElementById('addCompModal').style.display = 'none';
+            document.getElementById('inpCompName').value = '';
+            document.getElementById('inpCompUrl').value = '';
+            document.getElementById('inpCompSpecs').value = '';
+        }
+
+        async function saveCompetitor() {
+            const name = document.getElementById('inpCompName').value.trim();
+            if (!name) return showToast('请输入竞品名称', 'error');
+            let specs = {};
+            const specsStr = document.getElementById('inpCompSpecs').value.trim();
+            if (specsStr) {
+                try { specs = JSON.parse(specsStr); } catch (e) { return showToast('参数 JSON 格式错误', 'error'); }
+            }
+            const product = catalogData.find(function(p) { return p.productId === currentProductId; });
+            if (!product.competitors) product.competitors = [];
+            product.competitors.push({ name: name, specs: specs, url: document.getElementById('inpCompUrl').value.trim() });
+            try {
+                const r = await fetch(API + '/api/skills/smart-fetch/bom/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ productId: currentProductId, name: product.name, category: product.category, bomData: product.bom || [], specs: product.specs, contentTags: product.contentTags })
+                });
+                const d = await r.json();
+                if (d.success) {
+                    showToast('✅ 竞品已添加', 'success');
+                    closeAddModal();
+                    loadCompetitors();
+                } else {
+                    showToast('保存失败: ' + d.message, 'error');
+                }
+            } catch (e) {
+                showToast('请求失败: ' + e.message, 'error');
+            }
+        }
+
+        function removeCompetitor(index) {
+            if (!confirm('确定删除此竞品？')) return;
+            const product = catalogData.find(function(p) { return p.productId === currentProductId; });
+            product.competitors.splice(index, 1);
+            saveCompetitorsToBackend(product);
+            loadCompetitors();
+        }
+
+        async function saveCompetitorsToBackend(product) {
+            try {
+                await fetch(API + '/api/skills/smart-fetch/bom/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ productId: product.productId, name: product.name, category: product.category, bomData: product.bom || [], specs: product.specs, contentTags: product.contentTags })
+                });
+            } catch (e) {}
+        }
+
+        async function publishTemplate(type, target) {
+            if (!currentProductId) return showToast('请先选择产品', 'error');
+            const contentEl = document.getElementById('tplPreview_' + type);
+            if (!contentEl) return showToast('未找到内容', 'error');
+            const content = contentEl.innerText || contentEl.textContent;
+            if (!content) return showToast('内容为空', 'error');
+
+            const product = catalogData.find(function(p) { return p.productId === currentProductId; }) || {};
+            const title = (product.name || currentProductId) + ' —— ' + (type === 'product_intro' ? '产品介绍' : type === 'comparison' ? '竞品对比' : type === 'use_case' ? '场景应用' : '方法论分析');
+
+            const endpoint = target === 'cms' ? '/api/publish/cms' : '/api/publish/wechat';
+            const label = target === 'cms' ? 'CMS' : '微信草稿箱';
+
+            if (!confirm('确认推送到' + label + '？\n标题: ' + title)) return;
+
+            try {
+                showToast('⏳ 正在推送到' + label + '...', 'success');
+                const r = await fetch(API + endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: title, content: content, productId: currentProductId })
+                });
+                const d = await r.json();
+                if (d.success) {
+                    showToast('✅ 已推送到' + label, 'success');
+                } else {
+                    showToast('❌ 推送失败: ' + d.message, 'error');
+                }
+            } catch (e) {
+                showToast('❌ 请求失败: ' + e.message, 'error');
+            }
+        }
+
+        function useTemplate(type) {
+            const contentEl = document.getElementById('tplPreview_' + type);
+            if (!contentEl) return;
+            const text = contentEl.innerText || contentEl.textContent;
+            if (!text) return showToast('无内容可复制', 'error');
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(function() { showToast('✅ 已复制到剪贴板', 'success'); });
+            } else {
+                const ta = document.createElement('textarea');
+                ta.value = text; document.body.appendChild(ta);
+                ta.select(); document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast('✅ 已复制到剪贴板', 'success');
+            }
+        }
+
+        function showToast(msg, type) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast ' + type + ' active';
+            setTimeout(function() { t.classList.remove('active'); }, 3000);
+        }
+
+        loadProducts();
+    </script>
+</body>
+</html>

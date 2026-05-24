@@ -1,0 +1,45 @@
+{
+  "products": [
+    {
+      "productId": "PLM-DET-V3",
+      "name": "智能检测终端 V3",
+      "category": "工业检测设备",
+      "specs": {
+        "检测精度": "0.01mm",
+        "响应时间": "5ms",
+        "算力": "2 TOPS",
+        "功耗": "5W",
+        "协议": "MQTT/OPC UA",
+        "频段": "5G/Sub-6G",
+        "输入电压": "24V DC",
+        "防护等级": "IP67"
+      },
+      "bom": [],
+      "competitors": [
+        {
+          "name": "SICK W16",
+          "specs": {
+            "检测精度": "0.05mm",
+            "响应时间": "10ms",
+            "防护等级": "IP67",
+            "价格": "¥8000"
+          }
+        },
+        {
+          "name": "基恩士 LR-Z",
+          "specs": {
+            "检测精度": "0.02mm",
+            "响应时间": "8ms",
+            "防护等级": "IP67",
+            "价格": "¥6500"
+          }
+        }
+      ],
+      "contentTags": [],
+      "contentGenerated": 0,
+      "createdAt": "2026-05-21T08:55:37.432Z",
+      "lastUpdated": "2026-05-22T07:43:26.719Z"
+    }
+  ],
+  "lastUpdated": "2026-05-22T07:43:26.719Z"
+}

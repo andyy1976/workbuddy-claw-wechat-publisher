@@ -1,0 +1,170 @@
+﻿<!DOCTYPE html>
+<html lang='zh-CN'>
+<head>
+  <meta charset='UTF-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>去AI味优化 - WorkBuddy</title>
+  <link rel='stylesheet' href='/css/common.css'>
+  <style>
+    .editor-container { display: flex; gap: 16px; min-height: 500px; }
+    .editor-pane { flex: 1; display: flex; flex-direction: column; }
+    .editor-pane > label { font-weight: 600; margin-bottom: 8px; color: var(--text); }
+    .editor-pane textarea { width: 100%; min-height: 400px; resize: vertical; }
+    .editor-pane-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .editor-pane-header label { font-weight: 600; color: var(--text); }
+    #deaiOutput { background: var(--bg); padding: 16px; border-radius: 6px; min-height: 400px; white-space: pre-wrap; word-break: break-word; color: var(--success); font-size: 14px; line-height: 1.7; overflow-y: auto; border: 1px solid var(--border); }
+    .loading-overlay { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 10; border-radius: 6px; }
+    .loading-overlay.show { display: flex; }
+    .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .stats-row { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+    .stat-badge { background: var(--bg); border: 1px solid var(--border); padding: 6px 12px; border-radius: 4px; font-size: 13px; color: var(--text2); }
+    .stat-badge span { color: var(--accent); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class='app'>
+    <aside class='sidebar'>
+      <div class='sidebar-logo'><h1>🚀 WorkBuddy</h1><p>内容数字员工平台 v6.0</p></div>
+      <nav class='sidebar-nav' id='mainNav'></nav>
+      <div class='sidebar-footer'><div class='status'><span class='dot'></span><span id='serverStatus'>服务运行中</span></div></div>
+    </aside>
+    <div class='main'>
+      <header class='topbar'>
+        <h2>🧹 去AI味优化</h2>
+        <div class='topbar-actions'><button class='btn btn-outline' onclick='healthCheck()'>健康检查</button></div>
+      </header>
+      <div class='content'>
+        <!-- 控制栏 -->
+        <div style='display:flex;align-items:flex-end;gap:16px;margin-bottom:20px;flex-wrap:wrap;'>
+          <div class='form-group' style='margin-bottom:0;'>
+            <label class='form-label'>🧹 优化强度</label>
+            <select class='form-select' id='deaiIntensity' style='min-width:280px;'>
+              <option value='light'>轻度: 保留原意,修正明显AI痕迹</option>
+              <option value='medium' selected>中度: 重构AI味句子,增加案例</option>
+              <option value='heavy'>重度: 完全重写,人类写作风格</option>
+            </select>
+          </div>
+          <button class='btn btn-primary' onclick='deaiifyContent()' id='btnDeAI'>🧹 开始优化</button>
+        </div>
+
+        <!-- 编辑器双栏 -->
+        <div class='editor-container'>
+          <!-- 左：输入 -->
+          <div class='editor-pane'>
+            <label>📥 原始内容</label>
+            <textarea id='deaiInput' rows='22' placeholder='粘贴需要去AI味的内容...&#10;&#10;或从「内容生成」页面自动带入'></textarea>
+          </div>
+          <!-- 右：输出 -->
+          <div class='editor-pane'>
+            <div class='editor-pane-header'>
+              <label>✨ 优化结果</label>
+              <button class='btn btn-sm btn-outline' onclick='copyOutput()'>📋 复制</button>
+            </div>
+            <div style='position:relative;'>
+              <pre id='deaiOutput'>优化结果将显示在这里...</pre>
+              <div class='loading-overlay' id='deaiLoading'>
+                <div style='text-align:center;color:var(--text);'><div class='spinner' style='margin:0 auto 12px;'></div><span>去AI味处理中...</span></div>
+              </div>
+            </div>
+            <div class='stats-row' id='deaiStats' style='display:none;'></div>
+          </div>
+        </div>
+
+        <!-- 快捷操作 -->
+        <div style='margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;'>
+          <button class='btn btn-outline' onclick='sendToPublish()'>📤 发送到发布页</button>
+          <button class='btn btn-outline' onclick='clearAll()'>🗑️ 清空</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id='toast' class='toast'></div>
+  <script src='/js/common.js'></script>
+  <script>
+    // ── 页面加载：从 localStorage 恢复内容 ──
+    document.addEventListener('DOMContentLoaded', () => {
+      const saved = localStorage.getItem('deaiifyInput');
+      if (saved) {
+        document.getElementById('deaiInput').value = saved;
+        showToast('已加载从生成页面传递的内容', 'success');
+        localStorage.removeItem('deaiifyInput');
+      }
+    });
+
+    function copyOutput() {
+      const text = document.getElementById('deaiOutput').textContent;
+      if (!text || text === '优化结果将显示在这里...') return showToast('没有可复制的内容', 'error');
+      navigator.clipboard.writeText(text).then(() => showToast('已复制到剪贴板'));
+    }
+
+    function clearAll() {
+      document.getElementById('deaiInput').value = '';
+      document.getElementById('deaiOutput').textContent = '优化结果将显示在这里...';
+      document.getElementById('deaiStats').style.display = 'none';
+    }
+
+    function sendToPublish() {
+      const text = document.getElementById('deaiOutput').textContent;
+      if (!text || text === '优化结果将显示在这里...') return showToast('没有可发送的内容', 'error');
+      localStorage.setItem('deaiifiedContent', text);
+      showToast('已保存到发布页面，请切换到「一键发布」', 'success');
+    }
+
+    async function deaiifyContent() {
+      const input = document.getElementById('deaiInput').value.trim();
+      if (!input) return showToast('请输入需要优化的内容', 'error');
+
+      const btn = document.getElementById('btnDeAI');
+      const loading = document.getElementById('deaiLoading');
+      const output = document.getElementById('deaiOutput');
+      const stats = document.getElementById('deaiStats');
+
+      // UI 状态
+      btn.disabled = true;
+      btn.textContent = '⏳ 处理中...';
+      loading.classList.add('show');
+      output.textContent = '';
+      stats.style.display = 'none';
+
+      try {
+        const intensity = document.getElementById('deaiIntensity').value;
+        const res = await fetch('/api/content/deaiify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: input, intensity })
+        });
+
+        const data = await res.json();
+
+        if (!data.success) throw new Error(data.message || '服务器返回错误');
+
+        const result = data.data.optimized || data.data.result || '';
+        output.textContent = result;
+
+        // 显示统计信息
+        if (data.data.reduction) {
+          const r = data.data.reduction;
+          stats.innerHTML =
+            '<span class="stat-badge">原文: <span>' + r.originalLength + '</span> 字</span>' +
+            '<span class="stat-badge">优化后: <span>' + r.optimizedLength + '</span> 字</span>' +
+            '<span class="stat-badge">变化: <span>' + (r.optimizedLength - r.originalLength) + '</span> 字</span>';
+          stats.style.display = 'flex';
+        }
+
+        // 自动存储供发布页使用
+        localStorage.setItem('deaiifiedContent', result);
+        showToast('去AI味完成！结果已自动保存', 'success');
+
+      } catch (e) {
+        output.textContent = '❌ 错误: ' + e.message;
+        showToast(e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🧹 开始优化';
+        loading.classList.remove('show');
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>模型配置 - WorkBuddy</title>
+  <link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <h1>🚀 WorkBuddy</h1>
+        <p>内容数字员工平台 v6.0</p>
+      </div>
+      <nav class="sidebar-nav" id="mainNav"></nav>
+      <div class="sidebar-footer">
+        <div class="status"><span class="dot"></span><span id="serverStatus">服务运行中</span></div>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <h2>🧠 模型配置</h2>
+        <div class="topbar-actions">
+          <button class="btn btn-outline" onclick="healthCheck()">健康检查</button>
+          <button class="btn btn-primary" onclick="loadModelList()"><span>+</span> 刷新列表</button>
+        </div>
+      </header>
+
+      <div class="content">
+
+        <!-- 当前选中模型 -->
+        <div id="currentModelBadge" style="padding:12px 16px; background:var(--surface2); border-radius:8px; margin-bottom:16px; font-size:14px; display:none;">
+          🎯 当前使用: <strong id="currentModelName">-</strong>
+        </div>
+
+        <!-- 模型列表表格 -->
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header"><span class="card-title">已配置模型</span></div>
+          <div class="table-responsive">
+            <table class="data-table" id="modelTable">
+              <thead>
+                <tr>
+                  <th>模型名称</th>
+                  <th>API URL</th>
+                  <th>优先级</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="modelList"></tbody>
+            </table>
+          </div>
+          <div id="modelListEmpty" style="display:none; padding:24px; text-align:center; color:var(--text2);">暂无配置的模型，请在下方添加。</div>
+        </div>
+
+        <!-- 添加/更新模型 -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">添加 / 更新模型</span></div>
+          <div class="form-group" style="margin-bottom:16px;">
+            <label class="form-label">选择模型</label>
+            <select class="form-select" id="configModelSelect" style="width:100%;">
+              <option value="">-- 请选择模型 --</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:16px;">
+            <label class="form-label">API Key</label>
+            <input class="form-input" id="configApiKey" type="password" placeholder="sk-... (输入您的API Key)">
+            <div style="font-size:12px; color:var(--text2); margin-top:4px;">提示: API Key 将安全保存在服务器，不会显示在界面上</div>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:12px;">
+            <button class="btn btn-success" onclick="saveApiKey()">💾 保存配置</button>
+            <button class="btn btn-outline" onclick="testConnection()">🔗 测试连接</button>
+          </div>
+          <div id="testResult" style="display:none; margin-top:12px; padding:12px; background:var(--bg); border-radius:8px; font-size:13px; white-space:pre-wrap; line-height:1.6;"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="/js/common.js"></script>
+  <script>
+    // ── 健康检查 ─────────────────────────────────
+    async function healthCheck() {
+      try {
+        const r = await fetch('/api/health');
+        const d = await r.json();
+        document.getElementById('serverStatus').textContent = '运行中 (' + Math.round(d.uptime) + 's)';
+        showToast('✅ 服务正常 v' + d.version);
+      } catch (e) {
+        document.getElementById('serverStatus').textContent = '离线';
+        showToast('❌ 服务未启动', 'error');
+      }
+    }
+
+    // ── Toast ────────────────────────────────────
+    function showToast(msg, type) {
+      type = type || 'success';
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast ' + type;
+      setTimeout(() => t.classList.add('show'), 10);
+      setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
+    // ── 加载模型列表（对齐旧版逻辑） ─────────────
+    async function loadModelList() {
+      try {
+        const r = await fetch(API + '/api/models/list');
+        const d = await r.json();
+
+        console.log('[models] API Response:', d);
+
+        // 填充下拉框
+        const select = document.getElementById('configModelSelect');
+        select.innerHTML = '<option value="">-- 请选择模型 --</option>';
+
+        // 填充表格
+        const listEl = document.getElementById('modelList');
+
+        // 解析响应：后端返回 { success:true, data: { _selected:"xxx", deepseek:{...}, volcengine:{...}, ... } }
+        let models = [];
+        const selectedModel = (d.data && d.data._selected) || null;
+        let rawData = d.data;
+
+        if (Array.isArray(rawData)) {
+          models = rawData;
+        } else if (rawData && typeof rawData === 'object') {
+          models = Object.entries(rawData)
+            .filter(([k]) => k !== '_selected')
+            .map(([id, model]) => ({ id, ...model }));
+        }
+
+        // 显示当前选中模型 badge
+        const badge = document.getElementById('currentModelBadge');
+        const nameEl = document.getElementById('currentModelName');
+        if (badge && nameEl && selectedModel) {
+          const sel = models.find(function(m) { return m.id === selectedModel; });
+          nameEl.textContent = sel ? (sel.name + ' (' + selectedModel + ')') : selectedModel;
+          badge.style.display = 'block';
+        } else if (badge) {
+          badge.style.display = 'none';
+        }
+
+        if (!models.length) {
+          listEl.innerHTML = '';
+          document.getElementById('modelListEmpty').style.display = 'block';
+          select.innerHTML = '<option value="">-- 无可用模型 --</option>';
+          return;
+        }
+
+        // 构建表格行
+        var tableHtml = '';
+        models.forEach(function(m) {
+          var isSelected = (m.id === selectedModel);
+          var rowStyle = isSelected ? 'background:rgba(76,175,80,0.08);' : '';
+          var escId = (m.id || '').replace(/'/g, "\\'");
+          tableHtml += '<tr style="' + rowStyle + '">'
+            + '<td>' + (m.name || '-') + (isSelected ? ' <span style="color:var(--success);font-size:11px;">★ 当前</span>' : '') + '</td>'
+            + '<td style="font-size:11px;color:var(--text2);max-width:200px;overflow:hidden;text-overflow:ellipsis;" title="' + (m.url || m.baseUrl || '') + '">' + (m.url || m.baseUrl || '-') + '</td>'
+            + '<td>' + (m.priority || 10) + '</td>'
+            + '<td>' + (m.enabled ? '<span style="color:var(--success);">● 启用</span>' : '<span style="color:var(--danger);">○ 禁用</span>') + '</td>'
+            + '<td>'
+              + (!isSelected && m.enabled ? '<button class="btn btn-sm btn-success" onclick="selectModel(\'' + escId + '\')">选用</button> ' : '')
+              + '<button class="btn btn-sm btn-outline" onclick="toggleModel(\'' + escId + '\')">' + (m.enabled ? '禁用' : '启用') + '</button> '
+              + '<button class="btn btn-sm btn-outline" onclick="testModelById(\'' + escId + '\')">测试</button>'
+            + '</td>'
+          + '</tr>';
+
+          // 同时填充下拉选项
+          var opt = document.createElement('option');
+          opt.value = m.id;
+          opt.textContent = m.name || m.id;
+          select.appendChild(opt);
+        });
+
+        listEl.innerHTML = tableHtml;
+        document.getElementById('modelListEmpty').style.display = 'none';
+
+        console.log('[models] Loaded', models.length, 'models, selected:', selectedModel);
+
+      } catch (e) {
+        console.error('[models] loadModelList error:', e);
+        var listEl = document.getElementById('modelList');
+        if (listEl) listEl.innerHTML = '';
+        var emptyDiv = document.getElementById('modelListEmpty');
+        if (emptyDiv) {
+          emptyDiv.textContent = '加载失败: ' + e.message;
+          emptyDiv.style.display = 'block';
+        }
+        showToast('加载模型列表失败: ' + e.message, 'error');
+      }
+    }
+
+    // ── 保存 API Key ─────────────────────────────
+    async function saveApiKey() {
+      var modelId = document.getElementById('configModelSelect').value;
+      if (!modelId) return showToast('请先选择模型', 'error');
+
+      var apiKey = document.getElementById('configApiKey').value.trim();
+      if (!apiKey) return showToast('请填写 API Key', 'error');
+
+      try {
+        var r = await fetch(API + '/api/models/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: modelId,
+            config: {
+              key: apiKey,
+              enabled: true
+            }
+          })
+        });
+        var d = await r.json();
+        if (d.success) {
+          showToast('✅ 配置已保存，模型已启用');
+          document.getElementById('configApiKey').value = '';
+          loadModelList(); // 刷新列表
+        } else {
+          showToast(d.message || '保存失败', 'error');
+        }
+      } catch (e) {
+        showToast('保存失败: ' + e.message, 'error');
+      }
+    }
+
+    // ── 测试连接 ─────────────────────────────────
+    async function testConnection() {
+      var modelId = document.getElementById('configModelSelect').value;
+      if (!modelId) return showToast('请先选择模型', 'error');
+
+      var apiKey = document.getElementById('configApiKey').value.trim();
+      if (!apiKey) return showToast('请填写 API Key', 'error');
+
+      var resultDiv = document.getElementById('testResult');
+      resultDiv.style.display = 'block';
+      resultDiv.textContent = '⏳ 测试中...';
+
+      try {
+        var r = await fetch(API + '/api/models/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: modelId,
+            config: { key: apiKey },
+            prompt: '你好，请回复"连接成功"'
+          })
+        });
+        var d = await r.json();
+        if (d.success) {
+          resultDiv.textContent = '✅ ' + (d.response || d.data?.reply || '连接成功');
+          showToast('模型测试成功 ✅');
+        } else {
+          resultDiv.textContent = '❌ 测试失败: ' + (d.error || d.message || '未知错误');
+          showToast('模型测试失败', 'error');
+        }
+      } catch (e) {
+        resultDiv.textContent = '❌ 测试失败: ' + e.message;
+        showToast('测试失败: ' + e.message, 'error');
+      }
+    }
+
+    // ── 切换启用/禁用 ────────────────────────────
+    async function toggleModel(id) {
+      try {
+        var r = await fetch(API + '/api/models/toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: id })
+        });
+        var d = await r.json();
+        if (d.success) {
+          showToast('模型状态已切换');
+          loadModelList();
+        } else {
+          showToast(d.message || '操作失败', 'error');
+        }
+      } catch (e) {
+        showToast('操作失败: ' + e.message, 'error');
+      }
+    }
+
+    // ── 按ID测试模型 ─────────────────────────────
+    async function testModelById(id) {
+      showToast('⏳ 正在测试 ' + id + ' ...');
+      try {
+        var r = await fetch(API + '/api/models/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: id,
+            prompt: '你好，请介绍一下自己'
+          })
+        });
+        var d = await r.json();
+        if (d.success) {
+          showToast('✅ ' + id + ' 测试成功');
+        } else {
+          showToast((d.message || d.error || '测试失败'), 'error');
+        }
+      } catch (e) {
+        showToast('测试失败: ' + e.message, 'error');
+      }
+    }
+
+    // ── 选用模型 ─────────────────────────────────
+    async function selectModel(id) {
+      try {
+        var r = await fetch(API + '/api/models/select', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider: id })
+        });
+        var d = await r.json();
+        if (d.success) {
+          showToast(d.message || '✅ 模型已选用，引擎配置已同步');
+          loadModelList();
+        } else {
+          showToast(d.message || '选用失败', 'error');
+        }
+      } catch (e) {
+        showToast('选用失败: ' + e.message, 'error');
+      }
+    }
+
+    // ── 页面加载 ─────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function() {
+      loadModelList();
+      healthCheck();
+    });
+  </script>
+</body>
+</html>

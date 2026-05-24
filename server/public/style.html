@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>风格系统 - WorkBuddy</title>
+  <link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <h1>🚀 WorkBuddy</h1>
+        <p>内容数字员工平台 v6.0</p>
+      </div>
+      <nav class="sidebar-nav" id="mainNav"></nav>
+      <div class="sidebar-footer">
+        <div class="status"><span class="dot"></span><span id="serverStatus">服务运行中</span></div>
+      </div>
+    </aside>
+    <div class="main">
+      <header class="topbar">
+        <h2>🎨 风格系统</h2>
+        <div class="topbar-actions"><button class="btn btn-outline" onclick="checkHealth()">健康检查</button></div>
+      </header>
+      <div class="content">
+        <div class="card">
+          <div class="card-header"><span class="card-title">📝 写作风格选择</span></div>
+          <div id="styleGrid" class="style-grid"></div>
+        </div>
+        <div class="card mt-md">
+          <div class="card-header"><span class="card-title">📱 平台适配</span></div>
+          <div id="platformGrid" class="style-grid"></div>
+        </div>
+        <div class="card mt-md">
+          <div class="card-header"><span class="card-title">🧹 去AI味核心规则</span></div>
+          <div id="antiAIRules" class="text-muted"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="toast" class="toast"></div>
+  <script src="/js/common.js"></script>
+  <script>
+    async function loadStyles() {
+      try {
+        const res = await fetch('/api/style/list');
+        const d = await res.json();
+        if (d.success && d.data) {
+          // 风格卡片
+          const grid = document.getElementById('styleGrid');
+          const styles = d.data.styles || {};
+          grid.innerHTML = Object.values(styles).map(s => `
+            <div class="style-card" onclick="selectStyle('${s.id}')">
+              <div class="name">${s.id === 'khazix' ? '🔥 ' : ''}${s.name}</div>
+              <div class="desc">${s.description}</div>
+              <div class="text-sm mb-md">${(s.features||[]).map(f => '<span class="tag">' + f + '</span> ').join('')}</div>
+              <div class="example">"${s.example}"</div>
+            </div>
+          `).join('');
+
+          // 平台适配
+          const pgrid = document.getElementById('platformGrid');
+          const platforms = d.data.platforms || {};
+          pgrid.innerHTML = Object.entries(platforms).map(([k, v]) => `
+            <div class="style-card">
+              <div class="name">${v.name}</div>
+              <div class="desc">${v.wordRange} · ${v.style}</div>
+            </div>
+          `).join('');
+        }
+
+        // 反AI味规则（单独请求）
+        try {
+          const gr = await fetch('/api/style/guide');
+          const gd = await gr.json();
+          if (gd.success && gd.data && gd.data.antiAIRules) {
+            document.getElementById('antiAIRules').innerHTML =
+              '<ul style="padding-left:20px; line-height:2;">' +
+              gd.data.antiAIRules.map(r => '<li>' + r + '</li>').join('') +
+              '</ul>';
+          }
+        } catch(e) {}
+      } catch (e) {
+        showToast('加载失败: ' + e.message, 'error');
+      }
+    }
+
+    function selectStyle(id) {
+      showToast('已选择风格: ' + id);
+    }
+
+    document.addEventListener('DOMContentLoaded', loadStyles);
+  </script>
+</body>
+</html>

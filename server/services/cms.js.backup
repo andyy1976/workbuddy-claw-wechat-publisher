@@ -36,17 +36,9 @@ async function getCategories() {
     try {
         connection = await mysql.createConnection(DB_CONFIG);
         const [rows] = await connection.execute(
-            'SELECT typeid AS id, typename AS name, keywords FROM lvbo_type WHERE ismenu = 1 ORDER BY irank ASC'
+            'SELECT id, name FROM lvbo_type WHERE status = 1 ORDER BY sort ASC'
         );
-        // 转为对象格式，与 fallback 的 CATEGORY_MAP 保持一致
-        const data = {};
-        for (const row of rows) {
-            data[row.id] = {
-                name: row.name,
-                keywords: (row.keywords || '').split(',').map(k => k.trim()).filter(Boolean)
-            };
-        }
-        return { success: true, data, source: 'database' };
+        return { success: true, data: rows, source: 'database' };
     } catch (e) {
         console.error('[getCategories] 数据库查询失败:', e.message);
         return { success: true, data: CATEGORY_MAP, source: 'fallback' };
@@ -91,21 +83,11 @@ async function pushArticle(article, retryCount = 0) {
         return { success: false, message: '缺少标题或内容' };
     }
     
-    // ── Markdown → HTML 转换（强制转换，确保有排版）─────────────────────────────────────
-    let htmlContent;
-    try {
-        console.log(`[pushArticle] 原始内容前100字符: ${content.substring(0, 100)}`);
-        console.log(`[pushArticle] 检测到Markdown语法: ${/[#{*}_>`\\[\\]\-]/.test(content)}`);
-        
-        // 强制转换：无论是否检测到Markdown，都尝试用marked解析
-        htmlContent = marked.parse(content);
-        
-        console.log(`[pushArticle] ✅ Markdown→HTML转换成功，HTML长度: ${htmlContent.length}`);
-        console.log(`[pushArticle] HTML前100字符: ${htmlContent.substring(0, 100)}`);
-    } catch (e) {
-        console.error(`[pushArticle] ❌ Markdown转换失败，使用原文: ${e.message}`);
-        htmlContent = content; // 失败时保持原文
-    }
+    // ── Markdown → HTML 转换 ─────────────────────────────────────
+    // 检测内容是否包含 Markdown 语法，如果有则转换
+    const isMarkdown = /[#*_>\\[\\]-]/.test(content);
+    const htmlContent = isMarkdown ? marked.parse(content) : content;
+    console.log([pushArticle] Markdown检测: );
     
     const cat = categoryId || matchCategory(title, content);
     const catId = typeof cat === 'object' ? cat.id : cat;
@@ -117,9 +99,9 @@ async function pushArticle(article, retryCount = 0) {
         
         const addtime = new Date().toISOString().slice(0, 19).replace('T', ' ');
         const [result] = await connection.execute(
-            `INSERT INTO lvbo_article 
+            INSERT INTO lvbo_article 
              (title, content, typeid, status, copyfrom, addtime) 
-             VALUES (?, ?, ?, ?, ?, ?)`,
+             VALUES (?, ?, ?, ?, ?, ?),
             [
                 title.substring(0, 80),  // title max 80 chars
                 htmlContent,  // ← 使用转换后的 HTML
@@ -132,21 +114,21 @@ async function pushArticle(article, retryCount = 0) {
         
         const articleId = result.insertId;
         
-        console.log(`[pushArticle] ✅ 文章推送成功: ID=${articleId}, 标题=${title.substring(0, 30)}...`);
+        console.log([pushArticle] ✅ 文章推送成功: ID=, 标题=...);
         
         return {
             success: true,
             articleId,
             categoryId: catId,
-            url: `${process.env.CMS_BASE_URL || 'http://82.156.40.94'}/index.php?s=Article/index&id=${articleId}`,
+            url: ${process.env.CMS_BASE_URL || 'http://82.156.40.94'}/index.php?s=Article/index&id=,
             message: '发布成功'
         };
     } catch (e) {
-        console.error(`[pushArticle] ❌ 数据库写入失败 (尝试 ${retryCount + 1}/3):`, e.message);
+        console.error([pushArticle] ❌ 数据库写入失败 (尝试 /3):, e.message);
         
         // 重试逻辑（最多3次）
         if (retryCount < 2 && (e.code === 'ECONNRESET' || e.code === 'PROTOCOL_CONNECTION_LOST')) {
-            console.log(`[pushArticle] 🔄 重试中... (${retryCount + 2}/3)`);
+            console.log([pushArticle] 🔄 重试中... (/3));
             await new Promise(resolve => setTimeout(resolve, 1000));  // 等待1秒
             return pushArticle(article, retryCount + 1);
         }

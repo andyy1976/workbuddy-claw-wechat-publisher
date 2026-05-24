@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>方法论工作台 - WorkBuddy</title>
+    <style>
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --surface2: #232733;
+            --border: #2d3140;
+            --text: #e1e4ed;
+            --text2: #8b8fa3;
+            --accent: #6c5ce7;
+            --accent2: #a29bfe;
+            --success: #00b894;
+            --warning: #fdcb6e;
+            --danger: #e17055;
+            --info: #74b9ff;
+            --radius: 10px;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+        .app { display: flex; height: 100vh; }
+        .sidebar { width: 240px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .sidebar-logo { padding: 20px; border-bottom: 1px solid var(--border); }
+        .sidebar-logo h1 { font-size: 15px; color: var(--accent2); margin: 0; }
+        .sidebar-logo p { font-size: 11px; color: var(--text2); margin-top: 4px; }
+        .sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+        .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; cursor: pointer; color: var(--text2); font-size: 13px; transition: all 0.2s; }
+        .nav-item:hover { background: var(--surface2); color: var(--text); }
+        .nav-item.active { background: var(--accent); color: #fff; }
+        .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+        .nav-section { padding: 8px 20px; font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; }
+        .sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); }
+        .sidebar-footer .status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+        .sidebar-footer .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+        .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .topbar { height: 56px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 24px; }
+        .topbar h2 { font-size: 15px; font-weight: 500; }
+        .content { flex: 1; overflow-y: auto; padding: 24px; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .card-title { font-size: 15px; font-weight: 600; }
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 13px; color: var(--text2); margin-bottom: 6px; }
+        .form-input, .form-select, .form-textarea {
+            width: 100%; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border);
+            border-radius: 6px; color: var(--text); font-size: 13px; outline: none; transition: border-color 0.2s;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+        .form-textarea { min-height: 120px; resize: vertical; font-family: inherit; }
+        .btn { padding: 8px 16px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font-size: 13px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn:hover { border-color: var(--accent); }
+        .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .btn-primary:hover { background: var(--accent2); }
+        .btn-success { background: var(--success); border-color: var(--success); color: #fff; }
+        .btn-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+        .btn-sm { padding: 4px 10px; font-size: 12px; }
+        .btn:disabled { opacity: .5; cursor: not-allowed; }
+        .angle-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; }
+        .angle-card:hover { border-color: var(--accent); }
+        .angle-card.selected { border-color: var(--accent); background: rgba(108,92,231,0.1); }
+        .angle-card.red { border-left: 3px solid var(--danger); }
+        .angle-card.green { border-left: 3px solid var(--success); }
+        .angle-type { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+        .angle-text { font-size: 14px; margin-bottom: 8px; line-height: 1.5; }
+        .angle-meta { display: flex; gap: 12px; font-size: 12px; }
+        .angle-novelty { color: var(--info); }
+        .angle-resonance { color: var(--success); }
+        .angle-risk-low { color: var(--success); }
+        .angle-risk-medium { color: var(--warning); }
+        .angle-risk-high { color: var(--danger); }
+        .angle-psychology { font-size: 11px; color: var(--text2); margin-top: 6px; font-style: italic; }
+        .collision-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 10px; border-left: 3px solid var(--info); }
+        .collision-domain { font-size: 11px; color: var(--accent2); margin-bottom: 4px; }
+        .collision-label { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+        .collision-suggestion { font-size: 12px; color: var(--text2); line-height: 1.5; }
+        .collision-relevance { font-size: 11px; color: var(--info); margin-top: 6px; }
+        .filter-result { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+        .filter-result.pass { border-left: 3px solid var(--success); }
+        .filter-result.warn { border-left: 3px solid var(--warning); }
+        .filter-result.fail { border-left: 3px solid var(--danger); }
+        .filter-score { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+        .filter-score.pass { color: var(--success); }
+        .filter-score.warn { color: var(--warning); }
+        .filter-score.fail { color: var(--danger); }
+        .violation-item, .warning-item { font-size: 13px; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; }
+        .violation-item { background: rgba(225,112,85,0.1); border: 1px solid rgba(225,112,85,0.3); color: var(--danger); }
+        .warning-item { background: rgba(253,203,110,0.1); border: 1px solid rgba(253,203,110,0.3); color: var(--warning); }
+        .arc-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; }
+        .arc-card:hover { border-color: var(--accent); }
+        .arc-card.selected { border-color: var(--accent); background: rgba(108,92,231,0.1); }
+        .arc-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+        .arc-desc { font-size: 12px; color: var(--text2); margin-bottom: 8px; }
+        .arc-points { display: flex; gap: 4px; align-items: flex-end; height: 60px; }
+        .arc-point { flex: 1; background: var(--accent); border-radius: 3px; min-height: 4px; transition: all 0.3s; position: relative; }
+        .arc-point:hover { opacity: 0.8; }
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+        .stat-card .label { font-size: 12px; color: var(--text2); margin-bottom: 8px; }
+        .stat-card .value { font-size: 28px; font-weight: 700; }
+        .stat-card .value.up { color: var(--success); }
+        .stat-card .value.down { color: var(--danger); }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin: 2px; }
+        .tag-accent { background: rgba(108,92,231,0.15); color: var(--accent2); }
+        .tag-success { background: rgba(0,184,148,0.15); color: var(--success); }
+        .tag-danger { background: rgba(225,112,85,0.15); color: var(--danger); }
+        .tag-warning { background: rgba(253,203,110,0.15); color: var(--warning); }
+        .loading { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .empty-state { text-align: center; padding: 40px; color: var(--text2); font-size: 13px; }
+        .inner-tabs { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+        .inner-tab { padding: 10px 16px; font-size: 13px; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .inner-tab:hover { color: var(--text); }
+        .inner-tab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+        .inner-page { display: none; }
+        .inner-page.active { display: block; }
+        .progress-bar { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; margin: 8px 0; }
+        .progress-fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
+        .progress-fill.high { background: var(--success); }
+        .progress-fill.medium { background: var(--warning); }
+        .progress-fill.low { background: var(--danger); }
+        .suggestion { background: rgba(253,203,110,0.08); border: 1px solid rgba(253,203,110,0.25); border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; }
+        .suggestion .suggestion-title { font-size: 13px; font-weight: 600; color: var(--warning); margin-bottom: 4px; }
+        .suggestion .suggestion-text { font-size: 12px; color: var(--text2); line-height: 1.5; }
+        .diag-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .diag-table th { text-align: left; padding: 8px 12px; color: var(--text2); font-weight: 500; border-bottom: 1px solid var(--border); }
+        .diag-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+        .diag-pass { color: var(--success); }
+        .diag-fail { color: var(--danger); }
+        .domain-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+        .domain-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+        .domain-sources { font-size: 12px; color: var(--text2); margin-top: 6px; }
+        .domain-sources span { display: inline-block; padding: 2px 6px; background: var(--surface2); border-radius: 4px; margin: 2px; font-size: 11px; }
+        .method-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    </style>
+    <link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <h1>方法论工作台</h1>
+            <p>WorkBuddy v6.0 - 内容创作方法论引擎</p>
+        </div>
+        <nav class="sidebar-nav" id="mainNav"></nav>
+        <div class="sidebar-footer">
+            <div class="status"><span class="dot"></span><span>方法论引擎已加载</span></div>
+        </div>
+    </aside>
+    <div class="main">
+        <div class="topbar">
+            <a href="/" style="text-decoration:none;color:var(--text2);margin-right:12px;font-size:14px;">&#8592; 返回</a>
+            <h2 id="page-title">信息雷达</h2>
+            <div style="display:flex;gap:4px;margin-left:auto;">
+                <button class="btn btn-sm method-tab active" onclick="switchPage('radar',this)">信息雷达</button>
+                <button class="btn btn-sm method-tab" onclick="switchPage('angle',this)">角度工坊</button>
+                <button class="btn btn-sm method-tab" onclick="switchPage('story',this)">故事引擎</button>
+                <button class="btn btn-sm method-tab" onclick="switchPage('data',this)">数据教练</button>
+            </div>
+        </div>
+        <div class="content">
+
+            <!-- Page 1: 信息雷达 -->
+            <div class="page active" id="page-radar">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">T型信息组合矩阵</div>
+                        <button class="btn btn-primary btn-sm" onclick="loadDashboard()">刷新</button>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                        <div>
+                            <div class="form-group">
+                                <label class="form-label">垂直领域（深度）</label>
+                                <select class="form-select" id="radar-vertical">
+                                    <option value="AI">AI / 大模型</option>
+                                    <option value="智能制造">智能制造</option>
+                                    <option value="数字化转型">数字化转型</option>
+                                    <option value="工业互联网">工业互联网</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="form-group">
+                                <label class="form-label">跨界触角（跨领域触点）</label>
+                                <input class="form-input" id="radar-broad" value="综艺,电影,商业传记,历史" placeholder="逗号分隔">
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="loadDashboard()">生成信息仪表盘</button>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">跨领域碰撞检测</div>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px;">
+                        <div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">热点话题</label>
+                                <input class="form-input" id="collision-topic" placeholder="例如：国产芯片突破">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">关键词（逗号分隔）</label>
+                                <input class="form-input" id="collision-keywords" placeholder="例如：突破,芯片,替代">
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="detectCollision()">检测跨领域碰撞</button>
+                    <div id="collision-results" style="margin-top:16px;"></div>
+                </div>
+                <div id="dashboard-results"></div>
+            </div>
+
+            <!-- Page 2: 角度工坊 -->
+            <div class="page" id="page-angle">
+                <div class="inner-tabs">
+                    <div class="inner-tab active" onclick="switchInnerPage('angle', 'red')">红牌角度（第一视角）</div>
+                    <div class="inner-tab" onclick="switchInnerPage('angle', 'green')">绿牌角度（反差/逆向生成）</div>
+                    <div class="inner-tab" onclick="switchInnerPage('angle', 'pipeline')">完整流程</div>
+                </div>
+                <div class="card">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px;">
+                        <div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">话题 <span style="color:var(--danger)">*</span></label>
+                                <input class="form-input" id="angle-topic" placeholder="例如：GPT-5发布">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">关键词（逗号分隔）</label>
+                                <input class="form-input" id="angle-keywords" placeholder="例如：AI,大模型,GPT">
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-danger" onclick="generateRedCards()">生成红牌角度</button>
+                        <button class="btn btn-success" onclick="generateGreenCards()">生成绿牌角度</button>
+                        <button class="btn btn-primary" onclick="runFullPipeline()">完整流程</button>
+                    </div>
+                </div>
+                <div class="inner-page active" id="inner-angle-red">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">红牌角度 - 第一视角，不建议直接使用</div>
+                        </div>
+                        <div class="empty-state" id="red-empty">输入话题后点击"生成红牌角度"</div>
+                        <div id="red-results"></div>
+                    </div>
+                </div>
+                <div class="inner-page" id="inner-angle-green">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">绿牌角度 - 反差/逆向生成，推荐使用</div>
+                            <span class="tag tag-accent" id="green-count"></span>
+                        </div>
+                        <div class="empty-state" id="green-empty">输入话题后点击"生成绿牌角度"</div>
+                        <div id="green-results"></div>
+                    </div>
+                    <div class="card" id="angle-detail" style="display:none;">
+                        <div class="card-header">
+                            <div class="card-title">角度详情 + 推荐情绪曲线</div>
+                        </div>
+                        <div id="angle-detail-content"></div>
+                    </div>
+                </div>
+                <div class="inner-page" id="inner-angle-pipeline">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">完整方法论流程</div>
+                        </div>
+                        <div class="empty-state" id="pipeline-empty">输入话题后点击"完整流程"</div>
+                        <div id="pipeline-results"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page 3: 故事引擎 -->
+            <div class="page" id="page-story">
+                <div class="inner-tabs">
+                    <div class="inner-tab active" onclick="switchInnerPage('story', 'escalation')">升温检测</div>
+                    <div class="inner-tab" onclick="switchInnerPage('story', 'value')">价值观过滤</div>
+                    <div class="inner-tab" onclick="switchInnerPage('story', 'arcs')">情绪曲线模板库</div>
+                </div>
+                <div class="inner-page active" id="inner-story-escalation">
+                    <div class="card">
+                        <div class="form-group">
+                            <label class="form-label">粘贴/输入内容（用于升温检测 + 情绪分析）</label>
+                            <textarea class="form-textarea" id="story-content" rows="10" placeholder="在此粘贴或输入文章内容..."></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="analyzeEscalation()">分析升温 + 情绪曲线</button>
+                    </div>
+                    <div class="card" id="escalation-result" style="display:none;">
+                        <div class="card-header"><div class="card-title">升温检测结果</div></div>
+                        <div id="escalation-content"></div>
+                    </div>
+                </div>
+                <div class="inner-page" id="inner-story-value">
+                    <div class="card">
+                        <div class="form-group">
+                            <label class="form-label">粘贴/输入内容（用于正向价值观审查）</label>
+                            <textarea class="form-textarea" id="value-content" rows="10" placeholder="在此粘贴或输入文章内容..."></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="runValueFilter()">价值观审查</button>
+                    </div>
+                    <div class="card" id="value-result" style="display:none;">
+                        <div class="card-header"><div class="card-title">正向价值观审查结果</div></div>
+                        <div id="value-content-result"></div>
+                    </div>
+                </div>
+                <div class="inner-page" id="inner-story-arcs">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">情绪曲线模板库</div>
+                            <button class="btn btn-sm" onclick="loadEmotionArcs()">刷新</button>
+                        </div>
+                        <div id="arcs-results"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page 4: 数据教练 -->
+            <div class="page" id="page-data">
+                <div class="inner-tabs">
+                    <div class="inner-tab active" onclick="switchInnerPage('data', 'predict')">发布前预测</div>
+                    <div class="inner-tab" onclick="switchInnerPage('data', 'diagnose')">发布后诊断</div>
+                    <div class="inner-tab" onclick="switchInnerPage('data', 'bloodline')">角度血统库</div>
+                </div>
+                <div class="inner-page active" id="inner-data-predict">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">发布前数据预测</div>
+                        </div>
+                        <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">基于角度评分 + 内容结构，预测发布后的关键指标</p>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+                            <div><div class="form-group" style="margin-bottom:0;"><label class="form-label">角度新颖度（0-100）</label><input class="form-input" id="predict-novelty" type="number" min="0" max="100" value="75"></div></div>
+                            <div><div class="form-group" style="margin-bottom:0;"><label class="form-label">角度共鸣力（0-100）</label><input class="form-input" id="predict-resonance" type="number" min="0" max="100" value="60"></div></div>
+                        </div>
+                        <div style="margin-bottom:16px;">
+                            <div class="form-group" style="margin-bottom:8px;"><label class="form-label">风险等级</label>
+                                <select class="form-select" id="predict-risk">
+                                    <option value="low">low（低风险）</option>
+                                    <option value="medium">medium（中风险）</option>
+                                    <option value="high">high（高风险）</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="margin-bottom:16px;">
+                            <div class="form-group" style="margin-bottom:8px;"><label class="form-label">内容是否有升温情绪曲线</label>
+                                <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);"><input type="checkbox" id="predict-has-arc"> 是，已有情绪设计</label>
+                            </div>
+                        </div>
+                        <div style="margin-bottom:16px;">
+                            <div class="form-group" style="margin-bottom:8px;"><label class="form-label">建议修改数（升温建议条数）</label><input class="form-input" id="predict-suggestions" type="number" min="0" max="10" value="0"></div>
+                        </div>
+                        <button class="btn btn-primary" onclick="predictPerformance()">预测数据</button>
+                    </div>
+                    <div class="card" id="predict-result" style="display:none;">
+                        <div class="card-header"><div class="card-title">预测结果 vs 基准</div></div>
+                        <div id="predict-content"></div>
+                    </div>
+                </div>
+                <div class="inner-page" id="inner-data-diagnose">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">发布后诊断 - 真实数据 vs 预测对比</div>
+                        </div>
+                        <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">输入发布后的真实数据，系统自动对比预测值并给出归因建议</p>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;">
+                            <div><div class="form-group" style="margin-bottom:0;"><label class="form-label">点赞率（%，例：1.5）</label><input class="form-input" id="diag-like" type="number" step="0.1" placeholder="例：1.8"></div></div>
+                            <div><div class="form-group" style="margin-bottom:0;"><label class="form-label">转发率（%，例：6.0）</label><input class="form-input" id="diag-share" type="number" step="0.1" placeholder="例：6.5"></div></div>
+                            <div><div class="form-group" style="margin-bottom:0;"><label class="form-label">完读率（%，长文约30/短文约70）</label><input class="form-input" id="diag-completion" type="number" step="0.1" placeholder="例：28"></div></div>
+                        </div>
+                        <div style="margin-bottom:16px;"><div class="form-group" style="margin-bottom:0;"><label class="form-label">预测点赞率（%，若有预测可留空）</label><input class="form-input" id="diag-pred-like" type="number" step="0.1" placeholder="例：2.5"></div></div>
+                        <div style="margin-bottom:16px;"><div class="form-group" style="margin-bottom:0;"><label class="form-label">预测转发率（%）</label><input class="form-input" id="diag-pred-share" type="number" step="0.1" placeholder="例：8.0"></div></div>
+                        <div style="margin-bottom:16px;"><div class="form-group" style="margin-bottom:0;"><label class="form-label">预测完读率（%）</label><input class="form-input" id="diag-pred-completion" type="number" step="0.1" placeholder="例：30"></div></div>
+                        <button class="btn btn-primary" onclick="diagnosePerformance()">开始诊断</button>
+                    </div>
+                    <div class="card" id="diagnose-result" style="display:none;">
+                        <div class="card-header"><div class="card-title">诊断报告</div></div>
+                        <div id="diagnose-content"></div>
+                    </div>
+                </div>
+                <div class="inner-page" id="inner-data-bloodline">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">角度血统库 - 好角度从哪来</div>
+                            <button class="btn btn-sm" onclick="loadBloodline()">刷新</button>
+                        </div>
+                        <div class="empty-state" id="bloodline-empty">暂无血统记录，发布后会自动记录</div>
+                        <div id="bloodline-results"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/js/common.js"></script>
+<script>
+API = '/api/methodology';
+
+// -- Page switching --
+function switchPage(page, el) {
+    document.querySelectorAll('.method-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    if (el) el.classList.add('active');
+    document.getElementById('page-' + page).classList.add('active');
+    const titles = { radar:'信息雷达', angle:'角度工坊', story:'故事引擎', data:'数据教练' };
+    document.getElementById('page-title').textContent = titles[page];
+}
+
+function switchInnerPage(parent, tab) {
+    const parentEl = document.getElementById('page-' + parent);
+    parentEl.querySelectorAll('.inner-tab').forEach(el => el.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    parentEl.querySelectorAll('.inner-page').forEach(el => el.classList.remove('active'));
+    document.getElementById('inner-' + parent + '-' + tab).classList.add('active');
+}
+
+// -- Radar --
+async function loadDashboard() {
+    const vertical = document.getElementById('radar-vertical').value;
+    const broad = document.getElementById('radar-broad').value;
+    const params = new URLSearchParams({ vertical, broad });
+    const el = document.getElementById('dashboard-results');
+    el.innerHTML = '<div style="text-align:center;padding:20px;"><span class="loading"></span> 加载中...</div>';
+    try {
+        const res = await fetch(API + '/info-dashboard?' + params);
+        const j = await res.json();
+        if (!j.success) throw new Error(j.error);
+        const d = j.data;
+        let html = '<div class="card"><div class="card-header"><div class="card-title">T型信息组合建议</div></div>';
+        html += '<div style="margin-bottom:16px;"><div style="font-size:14px;font-weight:600;margin-bottom:8px;">垂直深度：' + d.vertical.domain + '</div>';
+        html += '<div class="domain-card"><div class="domain-name">监控频率：' + d.vertical.depth + '</div><div class="domain-sources">';
+        (d.vertical.sources || []).forEach(s => { html += '<span>' + s + '</span>'; });
+        html += '</div></div></div>';
+        (d.broad || []).forEach(b => {
+            html += '<div style="margin-bottom:12px;"><div style="font-size:14px;font-weight:600;margin-bottom:8px;">' + b.domain + '</div>';
+            html += '<div class="domain-card"><div class="domain-name">监控频率：' + b.depth + '</div><div class="domain-sources">';
+            (b.sources || []).forEach(s => { html += '<span>' + s + '</span>'; });
+            html += '</div></div>';
+        });
+        html += '<div style="margin-top:16px;padding:12px;background:rgba(108,92,231,0.08);border-radius:8px;font-size:12px;color:var(--text2);">' + d.collisionCheck + '</div>';
+        html += '</div>';
+        el.innerHTML = html;
+    } catch (e) {
+        el.innerHTML = '<div class="card" style="border-left:3px solid var(--danger);">错误：' + e.message + '</div>';
+    }
+}
+
+async function detectCollision() {
+    const topic = document.getElementById('collision-topic').value.trim();
+    const keywordsStr = document.getElementById('collision-keywords').value.trim();
+    if (!topic) { alert('请输入热点话题'); return; }
+    const keywords = keywordsStr ? keywordsStr.split(/,|，/).map(s => s.trim()).filter(Boolean) : [];
+    const el = document.getElementById('collision-results');
+    el.innerHTML = '<div style="text-align:center;padding:20px;"><span class="loading"></span> 检测中...</div>';
+    try {
+        const res = await fetch(API + '/medici/collision', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ topic, keywords })
+        });
+        const j = await res.json();
+        if (!j.success) throw new Error(j.error);
+        const collisions = j.data.collisions || [];
+        if (collisions.length === 0) {
+            el.innerHTML = '<div class="empty-state">未检测到跨领域碰撞，尝试增加关键词或换一个话题</div>';
+            return;
+        }
+        let html = '';
+        collisions.forEach(c => {
+            html += '<div class="collision-card">' +
+                '<div class="collision-domain">' + (c.domain || '').toUpperCase() + ' · 相关度：' + ((c.relevance || 0) * 100).toFixed(0) + '%</div>' +
+                '<div class="collision-label">' + (c.label || '') + '</div>' +
+                '<div class="collision-suggestion">' + (c.suggestion || '') + '</div>' +
+                '<div class="collision-relevance">参考案例：' + (c.examples || []).join('、') + '</div>' +
+                '</div>';
+        });
+        el.innerHTML = html;
+    } catch (e) {
+        el.innerHTML = '<div class="card" style="border-left:3px solid var(--danger);">错误：' + e.message + '</div>';
+    }
+}
+
+// -- Angle Workshop --
+async function generateRedCards() {
+    const topic = document.getElementById('angle-topic').value.trim();
+    if (!topic) { alert('请输入话题'); return; }
+    const keywordsStr = document.getElementById('angle-keywords').value.trim();
+    const keywords = keywordsStr ? keywordsStr.split(/,|，/).map(s => s.trim()).filter(Boolean) : [];
+    const el = document.getElementById('red-results');
+    document.getElementById('red-empty').style.display = 'none';
+    el.innerHTML = '<div style="text-align:center;padding:20px;"><span class="loading"></span> 生成中...</div>';
+    try {
+        const res = await fetch(API + '/angle/red-cards', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ topic, keywords })
+        });
+        const j = await res.json();
+        if (!j.success) throw new Error(j.error);
+        const data = j.data;
+        let html = '<div style="margin-bottom:12px;padding:10px;background:rgba(225,112,85,0.08);border-radius:8px;font-size:12px;color:var(--danger);">&#9888; ' + (data.warning || '') + '（共 ' + (data.count || 0) + ' 个角度）</div>';
+        (data.redCards || []).forEach((a, i) => {
+            html += '<div class="angle-card red">' +
+                '<div class="angle-type">红牌 #' + (i+1) + ' · ' + (a.type || '') + '</div>' +
+                '<div class="angle-text">' + (a.angle || '') + '</div>' +
+                '<div class="angle-meta"><span class="angle-novelty">新颖度：' + (a.novelty || 0) + '/100（极低）</span></div>' +
+                '<div style="font-size:11px;color:var(--danger);margin-top:6px;">&#9888; ' + (a.risk || '') + '</div>' +
+                '</div>';
+        });
+        el.innerHTML = html;
+    } catch (e) {
+        el.innerHTML = '<div style="color:var(--danger);">错误：' + e.message + '</div>';
+    }
+}
+
+async function generateGreenCards() {
+    const topic = document.getElementById('angle-topic').value.trim();
+    if (!topic) { alert('请输入话题'); return; }
+    const keywordsStr = document.getElementById('angle-keywords').value.trim();
+    const keywords = keywordsStr ? keywordsStr.split(/,|，/).map(s => s.trim()).filter(Boolean) : [];
+    const el = document.getElementById('green-results');
+    document.getElementById('green-empty').style.display = 'none';
+    el.innerHTML = '<div style="text-align:center;padding:20px;"><span class="loading"></span> 生成中...</div>';
+    try {
+        const res = await fetch(API + '/angle/green-cards', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ topic, keywords })
+        });
+        const j = await res.json();
+        if (!j.success) throw new Error(j.error);
+        const angles = j.data.angles || [];
+        document.getElementById('green-count').textContent = '共 ' + angles.length + ' 个角度';
+        let html = '';
+        angles.forEach((a, i) => {
+            const scores = a.scores || {};
+            const riskClass = 'angle-risk-' + (scores.risk || 'low');
+            html += '<div class="angle-card green" onclick="selectAngle(' + i + ', this)" data-index="' + i + '">' +
+                '<div class="angle-type">绿牌 #' + (i+1) + ' · ' + (a.method || '') + '</div>' +
+                '<div class="angle-text">' + (a.angle || '') + '</div>' +
+                '<div class="angle-meta">' +
+                '<span class="angle-novelty">新颖度：' + (scores.novelty || 0) + '/100</span>' +
+                '<span class="angle-resonance">共鸣力：' + (scores.resonance || 0) + '/100</span>' +
+                '<span class="' + riskClass + '">风险：' + (scores.risk || 'low') + '</span>' +
+                '</div>' +
+                '<div class="angle-psychology">&#128161; ' + ((a.psychology || '').substring(0, 80)) + '</div>' +
+                '<div style="margin-top:8px;">' + (a.recommendation || '') + '</div>' +
+                '</div>';
+        });
+        el.innerHTML = html;
+        window._greenAngles = angles;
+    } catch (e) {
+        el.innerHTML = '<div style="color:var(--danger);">错误：' + e.message + '</div>';
+    }
+}
+
+function selectAngle(index, el) {
+    document.querySelectorAll('#green-results .angle-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    const angle = (window._greenAngles || [])[index];
+    if (!angle) return;
+    const detailEl = document.getElementById('angle-detail');
+    const contentEl = document.getElementById('angle-detail-content');
+    detailEl.style.display = 'block';
+    let html = '<div style="margin-bottom:16px;">' +
+        '<div style="font-size:16px;font-weight:600;margin-bottom:8px;">' + (angle.angle || '') + '</div>' +
+        '<div class="tag tag-accent">' + (angle.method || '') + '</div>' +
+        '<div class="tag tag-success">新颖度 ' + ((angle.scores && angle.scores.novelty) || 0) + '</div>' +
+        '<div class="tag tag-warning">共鸣 ' + ((angle.scores && angle.scores.resonance) || 0) + '</div>' +
+        '</div>';
+    html += '<div style="margin-bottom:12px;font-size:14px;font-weight:600;">推荐情绪曲线</div>';
+    const arc = angle.recommendedArc || {};
+    const arcName = arc.name || '未知';
+    const arcPoints = arc.points || [];
+    html += '<div class="arc-card selected">' +
+        '<div class="arc-name">' + arcName + '</div>' +
+        '<div class="arc-desc">' + (arc.description || '') + '</div>' +
+        '<div class="arc-points">';
+    arcPoints.forEach(p => {
+        const h = 4 + Math.max(0, p.emotion + 1) * 50;
+        html += '<div class="arc-point" style="height:' + h + 'px;" title="' + (p.label || '') + '：' + p.position + '"></div>';
+    });
+    html += '</div></div>';
+    const overall = (angle.scores && angle.scores.overall) || 0;
+    html += '<div style="margin-top:16px;">' +
+        '<div style="font-size:13px;color:var(--text2);margin-bottom:4px;">综合评分：' + overall + '/100</div>' +
+        '<div class="progress-bar"><div class="progress-fill ' + (overall>=70?'high':overall>=50?'medium':'low') + '" style="width:' + overall + '%;"></div></div>' +
+        '</div>';
+    contentEl.innerHTML = html;
+}
+
+async function runFullPipeline() {
+    const topic = document.getElementById('angle-topic').value.trim();
+    if (!topic) { alert('请输入话题'); return; }
+    const keywordsStr = document.getElementById('angle-keywords').value.trim();
+    const keywords = keywordsStr ? keywordsStr.split(/,|，/).map(s => s.trim()).filter(Boolean) : [];
+    const el = document.getElementById('pipeline-results');
+    document.getElementById('pipeline-empty').style.display = 'none';
+    el.innerHTML = '<div style="text-align:center;padding:20px;"><span class="loading"></span> 执行完整方法论流程...</div>';
+    try {
+        const res = await fetch(API + '/angle/full-pipeline', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ topic, keywords })
+        });
+        const j = await res.json();
+        if (!j.success) throw new Error(j.error);
+        const d = j.data;
+        let html = '';
+        const collisions = (d.step1_crossDomain && d.step1_crossDomain.collisions) || [];
+        html += '<div style="margin-bottom:16px;"><div style="font-size:14px;font-weight:600;margin-bottom:8px;">Step1：跨领域碰撞检测（' + collisions.length + ' 个碰撞）</div>';
+        if (collisions.length > 0) { collisions.forEach(c => { html += '<div class="collision-card"><div class="collision-label">' + c.label + '</div><div class="collision-suggestion">' + c.suggestion + '</div></div>'; }); } else { html += '<div style="font-size:12px;color:var(--text2);">未检测到跨领域碰撞</div>'; }
+        html += '</div>';
+        const red = (d.step2_redCards && d.step2_redCards.redCards) || [];
+        html += '<div style="margin-bottom:16px;"><div style="font-size:14px;font-weight:600;margin-bottom:8px;">Step2：红牌角度（' + red.length + ' 个，不建议使用）</div>';
+        red.slice(0, 3).forEach(a => { html += '<div class="angle-card red" style="padding:10px;font-size:13px;">' + a.angle + ' <span style="color:var(--danger);font-size:11px;">新颖度 ' + a.novelty + '</span></div>'; });
+        html += '</div>';
+        const green = d.step3_greenCards || [];
+        html += '<div style="margin-bottom:16px;"><div style="font-size:14px;font-weight:600;margin-bottom:8px;">Step3：绿牌角度（Top ' + Math.min(3, green.length) + '）</div>';
+        green.slice(0, 3).forEach(a => { const s = a.scores || {}; html += '<div class="angle-card green" style="padding:10px;"><div style="font-weight:600;margin-bottom:4px;">' + a.angle + '</div><div><span class="tag tag-success">新颖度 ' + s.novelty + '</span> <span class="tag tag-accent">' + (a.method || '') + '</span></div></div>'; });
+        html += '</div>';
+        html += '<div style="padding:12px;background:rgba(108,92,231,0.08);border-radius:8px;font-size:12px;color:var(--text2);">推荐角度：' + ((d.meta && d.meta.topAngle && d.meta.topAngle.angle) || '无') + '</div>';
+        el.innerHTML = html;
+    } catch (e) {
+        el.innerHTML = '<div style="color:var(--danger);">错误：' + e.message + '</div>';
+    }
+}
+
+// -- Story Engine --
+async function analyzeEscalation() {
+    const content = document.getElementById('story-content').value.trim();
+    if (!content) { alert('请粘贴或输入内容'); return; }
+    const el = document.getElementById('escalation-content');
+    document.getElementById('escalation-result').style.display = 'block';
+    el.innerHTML = '<div style="text-align:center;padding:20px;"><span class="loading"></span> 分析中...</div>';
+    try {
+        const res = await fetch(API + '/story/analyze', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ content }) });
+        const j = await res.json();
+        if (!j.success) throw new Error(j.error);
+        const d = j.data;
+        let html = '';
+        const suggestions = (d.suggestions || []);
+        if (suggestions.length > 0) {
+            html += '<div style="margin-bottom:16px;"><div style="font-size:14px;font-weight:600;margin-bottom:8px;">升温建议（' + suggestions.length + ' 条）</div>';
+            suggestions.forEach(s => { html += '<div class="suggestion"><div class="suggestion-title">' + (s.type || '') + '（优先级：' + (s.priority || 'medium') + '）</div><div class="suggestion-text">' + (s.message || '') + '</div></div>'; });
+            html += '</div>';
+        } else {
+            html += '<div style="padding:12px;background:rgba(0,184,148,0.08);border-radius:8px;font-size:13px;color:var(--success);margin-bottom:16px;">升温检测通过，内容已有足够推进</div>';
+        }
+        const points = d.escalationPoints || [];
+        if (points.length > 0) {
+            html += '<div style="margin-bottom:16px;"><div style="font-size:14px;font-weight:600;margin-bottom:8px;">情绪检测（' + points.length + ' 个关键点）</div>';
+            points.forEach(p => { html += '<div class="violation-item" style="margin-bottom:6px;">段落 ' + (p.paragraphIndex + 1) + '：' + (p.note || '') + '</div>'; });
+            html += '</div>';
+        }
+        el.innerHTML = html;
+    } catch (e) { el.innerHTML = '<div style="color:var(--danger);">错误：' + e.message + '</div>'; }
+}
+
+async function runValueFilter() {
+    const content = document.getElementById('value-content').value.trim();
+    if (!content) { alert('请粘贴或输入内容'); return; }
+    const el = document.getElementById('value-content-result');
+    document.getElementById('value-result').style.display = 'block';
+    el.innerHTML = '<div style="text-align:center;padding:20px;"><span class="loading"></span> 审查中...</div>';
+    try {
+        const res = await fetch(API + '/story/value-filter', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ content }) });
+        const j = await res.json();
+        if (!j.success) throw new Error(j.error);
+        const d = j.data;
+        const passed = d.passed;
+        let html = '<div class="filter-result ' + (passed ? 'pass' : (d.score || 0) >= 70 ? 'warn' : 'fail') + '">';
+        html += '<div class="filter-score ' + (passed ? 'pass' : (d.score || 0) >= 70 ? 'warn' : 'fail') + '">' + (d.score || 0) + ' 分</div>';
+        html += '<div style="font-size:13px;margin-bottom:12px;">' + (passed ? '通过正向价值观审查' : '未通过正向价值观审查') + '</div>';
+        const violations = d.violations || [];
+        if (violations.length > 0) {
+            html += '<div style="margin-bottom:12px;"><div style="font-size:13px;font-weight:600;margin-bottom:8px;">违规项（' + violations.length + '）</div>';
+            violations.forEach(v => { html += '<div class="violation-item"><span style="font-weight:600;">' + v.type + '（' + v.risk + '）</span>：' + v.msg + '</div>'; });
+            html += '</div>';
+        }
+        const warnings = d.warnings || [];
+        if (warnings.length > 0) {
+            html += '<div style="margin-bottom:12px;"><div style="font-size:13px;font-weight:600;margin-bottom:8px;">警告项（' + warnings.length + '）</div>';
+            warnings.forEach(w => { html += '<div class="warning-item"><span style="font-weight:600;">' + w.type + '（' + w.risk + '）</span>：' + w.msg + '</div>'; });
+            html += '</div>';
+        }
+        html += '</div>';
+        el.innerHTML = html;
+    } catch (e) { el.innerHTML = '<div style="color:var(--danger);">错误：' + e.message + '</div>'; }
+}
+
+async function loadEmotionArcs() {
+    const el = document.getElementById('arcs-results');
+    el.innerHTML = '<div style="text-align:center;padding:20px;"><span class="loading"></span> 加载中...</div>';
+    try {
+        const res = await fetch(API + '/emotion-arcs');
+        const j = await res.json();
+        if (!j.success) throw new Error(j.error);
+        const arcs = j.data || [];
+        if (!window._arcsData) window._arcsData = {};
+        let html = '';
+        arcs.forEach(a => {
+            window._arcsData[a.key] = a;
+            const points = (a.points || []);
+            html += '<div class="arc-card" onclick="showArcDetail(\'' + a.key + '\')" id="arc-card-' + a.key + '">' +
+                '<div class="arc-name">' + a.name + '</div>' +
+                '<div class="arc-desc">' + a.description + '</div>' +
+                '<div class="arc-points">';
+            points.forEach(p => {
+                const h = 4 + Math.max(0, p.emotion + 1) * 50;
+                html += '<div class="arc-point" style="height:' + h + 'px;" title="' + (p.label || '') + '：' + Math.round(p.position * 100) + '%"></div>';
+            });
+            html += '</div></div>';
+        });
+        el.innerHTML = html;
+    } catch (e) { el.innerHTML = '<div style="color:var(--danger);">错误：' + e.message + '</div>'; }
+}
+
+function showArcDetail(key) {
+    const arc = (window._arcsData || {})[key];
+    if (!arc) return;
+    document.querySelectorAll('#arcs-results .arc-card').forEach(c => c.classList.remove('selected'));
+    const card = document.getElementById('arc-card-' + key);
+    if (card) card.classList.add('selected');
+}
+
+// -- Data Coach --
+async function predictPerformance() {
+    const novelty = parseInt(document.getElementById('predict-novelty').value) || 75;
+    const resonance = parseInt(document.getElementById('predict-resonance').value) || 60;
+    const risk = document.getElementById('predict-risk').value;
+    const hasArc = document.getElementById('predict-has-arc').checked;
+    const suggestions = parseInt(document.getElementById('predict-suggestions').value) || 0;
+    const el = document.getElementById('predict-content');
+    document.getElementById('predict-result').style.display = 'block';
+    el.innerHTML = '<div style="text-align:center;padding:20px;"><span class="loading"></span> 预测中...</div>';
+    try {
+        const angle = { scores: { novelty, resonance, risk } };
+        const contentAnalysis = { escalationPoints: hasArc ? [{}] : [], suggestions: new Array(suggestions).fill({}) };
+        const res = await fetch(API + '/data/predict', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ angle, contentAnalysis }) });
+        const j = await res.json();
+        if (!j.success) throw new Error(j.error);
+        const d = j.data;
+        const predictions = d.predictions || {};
+        const diagnosis = d.diagnosis || {};
+        let html = '<div class="stats-row">';
+        const metrics = [
+            { key:'likeReadRatio', label:'点赞率', unit:'%' },
+            { key:'shareReadRatio', label:'转发率', unit:'%' },
+            { key:'completionRate', label:'完读率', unit:'%' }
+        ];
+        metrics.forEach(m => {
+            const predVal = ((predictions[m.key] || 0) * 100).toFixed(2);
+            const targetVal = (diagnosis[m.key] && parseFloat(diagnosis[m.key].target)) || '?';
+            const status = diagnosis[m.key] && diagnosis[m.key].status;
+            html += '<div class="stat-card">' +
+                '<div class="label">' + m.label + '（预测 / 基准）</div>' +
+                '<div class="value ' + (status === '达标' ? 'up' : 'down') + '">' + predVal + ' / ' + targetVal + '</div>' +
+                '<div style="font-size:12px;color:' + (status === '达标' ? 'var(--success)' : 'var(--danger)') + ';">' + (status || '未知') + '</div>' +
+                '</div>';
+        });
+        html += '</div>';
+        html += '<div style="margin-top:16px;"><div style="font-size:14px;font-weight:600;margin-bottom:8px;">诊断建议</div>';
+        Object.values(diagnosis).forEach(item => {
+            if (!item.suggestion) return;
+            html += '<div class="suggestion"><div class="suggestion-title">' + item.label + ' ' + (item.status === '达标' ? '&#10003;' : '&#9888;') + '</div><div class="suggestion-text">' + item.suggestion + '</div></div>';
+        });
+        html += '</div>';
+        el.innerHTML = html;
+    } catch (e) { el.innerHTML = '<div style="color:var(--danger);">错误：' + e.message + '</div>'; }
+}
+
+async function diagnosePerformance() {
+    const articleId = 'manual_' + Date.now();
+    const actualData = {
+        likeReadRatio: (parseFloat(document.getElementById('diag-like').value) || 0) / 100,
+        shareReadRatio: (parseFloat(document.getElementById('diag-share').value) || 0) / 100,
+        completionRate: (parseFloat(document.getElementById('diag-completion').value) || 0) / 100
+    };
+    const predictions = {};
+    const predLike = parseFloat(document.getElementById('diag-pred-like').value);
+    const predShare = parseFloat(document.getElementById('diag-pred-share').value);
+    const predCompletion = parseFloat(document.getElementById('diag-pred-completion').value);
+    if (!isNaN(predLike)) predictions.likeReadRatio = predLike / 100;
+    if (!isNaN(predShare)) predictions.shareReadRatio = predShare / 100;
+    if (!isNaN(predCompletion)) predictions.completionRate = predCompletion / 100;
+    const el = document.getElementById('diagnose-content');
+    document.getElementById('diagnose-result').style.display = 'block';
+    el.innerHTML = '<div style="text-align:center;padding:20px;"><span class="loading"></span> 诊断中...</div>';
+    try {
+        const res = await fetch(API + '/data/diagnose', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ articleId, actualData, predictions }) });
+        const j = await res.json();
+        if (!j.success) throw new Error(j.error);
+        const report = j.data;
+        const items = (report && report.items) || [];
+        let html = '<table class="diag-table"><thead><tr><th>指标</th><th>实际值</th><th>基准</th><th>状态</th><th>建议</th></tr></thead><tbody>';
+        items.forEach(item => {
+            html += '<tr><td>' + (item.label || '') + '</td><td>' + (item.actual || '') + '</td><td>' + (item.target || '') + '</td>' +
+                '<td class="' + (item.met ? 'diag-pass' : 'diag-fail') + '">' + (item.met ? '达标' : '未达标') + '</td>' +
+                '<td>' + (item.suggestion || '-') + '</td></tr>';
+        });
+        html += '</tbody></table>';
+        if (report.items && report.items.some(i => i.predicted)) {
+            html += '<div style="margin-top:16px;padding:12px;background:rgba(116,185,255,0.08);border-radius:8px;font-size:12px;color:var(--info);">预测准确率：' + items.filter(i => i.predictionAccuracy).map(i => (i.label || '') + ' ' + (i.predictionAccuracy || 0).toFixed(1) + '%').join(' | ') + '</div>';
+        }
+        el.innerHTML = html;
+    } catch (e) { el.innerHTML = '<div style="color:var(--danger);">错误：' + e.message + '</div>'; }
+}
+
+async function loadBloodline() {
+    const el = document.getElementById('bloodline-results');
+    const empty = document.getElementById('bloodline-empty');
+    el.innerHTML = '<div style="text-align:center;padding:20px;"><span class="loading"></span> 加载中...</div>';
+    try {
+        const res = await fetch(API + '/data/bloodline');
+        const j = await res.json();
+        if (!j.success) throw new Error(j.error);
+        const data = j.data || [];
+        if (data.length === 0) { empty.style.display = 'block'; el.innerHTML = ''; return; }
+        empty.style.display = 'none';
+        let html = '';
+        data.slice(-20).reverse().forEach((item, i) => {
+            html += '<div class="angle-card" style="margin-bottom:10px;">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+                '<span class="tag tag-accent">角度 #' + (data.length - i) + '</span>' +
+                '<span style="font-size:11px;color:var(--text2);">' + (item.recordedAt || '').substring(0, 19).replace('T', ' ') + '</span></div>' +
+                '<div style="font-size:13px;margin-bottom:6px;">来源：' + ((item.source && item.source.type) || '未知') + ' - ' + ((item.source && item.source.detail) || '') + '</div>' +
+                (item.performance ? '<div style="font-size:12px;color:var(--text2);">表现：点赞率 ' + (((item.performance.likeReadRatio || 0) * 100).toFixed(2)) + '% / 转发率 ' + (((item.performance.shareReadRatio || 0) * 100).toFixed(2)) + '%</div>' : '') +
+                '</div>';
+        });
+        el.innerHTML = html;
+    } catch (e) { el.innerHTML = '<div style="color:var(--danger);">错误：' + e.message + '</div>'; }
+}
+
+// -- Init --
+window.addEventListener('DOMContentLoaded', () => {
+    // Optional: auto-load emotion arcs and bloodline
+});
+</script>
+</body>
+</html>

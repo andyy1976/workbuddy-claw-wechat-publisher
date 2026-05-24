@@ -1,0 +1,61 @@
+{
+  "tasks": [
+    {
+      "id": "task_9am_daily",
+      "name": "每日9点热点内容发布",
+      "keywords": [
+        "AI",
+        "数字化转型",
+        "智能制造",
+        "数字员工"
+      ],
+      "schedule": "0 9 * * *",
+      "platforms": [
+        "wechat",
+        "cms"
+      ],
+      "enabled": true,
+      "createdAt": "2026-05-18T12:20:00.000Z",
+      "description": "每天9点自动采集热点、生成文章、发布到CMS和公众号草稿箱",
+      "language": "zh-CN",
+      "style": "professional",
+      "model": "deepseek",
+      "emailRecipients": [],
+      "agentCallable": true,
+      "tags": [
+        "daily",
+        "auto"
+      ]
+    },
+    {
+      "id": "task_9am_daily_en",
+      "name": "Daily AI News (English)",
+      "keywords": [
+        "AI",
+        "Digital Transformation",
+        "Smart Manufacturing",
+        "Digital Employee"
+      ],
+      "schedule": "0 9 * * *",
+      "platforms": [
+        "cms",
+        "email"
+      ],
+      "enabled": false,
+      "createdAt": "2026-05-21T04:10:00.000Z",
+      "description": "Daily AI news in English, published to CMS and sent via email",
+      "language": "en-US",
+      "style": "professional",
+      "model": "deepseek",
+      "emailRecipients": [],
+      "emailSubject": "[Auto] ${title} - ${date}",
+      "agentCallable": true,
+      "tags": [
+        "daily",
+        "english",
+        "auto"
+      ]
+    }
+  ],
+  "lastRun": null
+}

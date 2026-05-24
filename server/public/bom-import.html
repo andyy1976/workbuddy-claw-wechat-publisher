@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOM 数据导入 - WorkBuddy</title>
+    <link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <h1>🚀 WorkBuddy</h1>
+                <p>内容数字员工平台 v6.0</p>
+            </div>
+            <nav class="sidebar-nav" id="mainNav"></nav>
+            <div class="sidebar-footer">
+                <div class="status"><span class="dot"></span><span id="serverStatus">服务运行中</span></div>
+            </div>
+        </aside>
+        <div class="main">
+            <header class="topbar">
+                <h2>📋 BOM 数据导入</h2>
+                <div class="topbar-actions">
+                    <button class="btn btn-sm" onclick="loadProducts()">🔄 刷新产品</button>
+                    <button class="btn btn-sm" onclick="checkHealth()">🔍 健康检查</button>
+                </div>
+            </header>
+            <div class="content">
+                <div class="card">
+                    <div class="card-header"><span class="card-title">导入方式</span></div>
+                    <div class="section-tabs">
+                        <div class="section-tab active" onclick="switchMode('json', this)">JSON 导入</div>
+                        <div class="section-tab" onclick="switchMode('excel', this)">Excel 导入</div>
+                        <div class="section-tab" onclick="switchMode('plm', this)">PLM 对接</div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">选择产品 ID</label>
+                            <select class="form-input" id="bomProductId"><option>加载中...</option></select>
+                        </div>
+                    </div>
+
+                    <!-- JSON 导入 -->
+                    <div id="modeJson">
+                        <div class="form-group">
+                            <label class="form-label">BOM JSON 数据（数组格式）</label>
+                            <textarea class="form-textarea" id="bomJson" rows="10" placeholder='[
+  {"partNo":"SENSOR-001","name":"高精度传感器","qty":1,"supplier":"博世","params":{"精度":"0.01mm"}},
+  {"partNo":"MCU-002","name":"AI推理芯片","qty":1,"supplier":"NXP","params":{"算力":"2 TOPS"}}
+]'></textarea>
+                            <div class="text-muted mt-sm">支持标准BOM格式，每个零件需包含 partNo（零件号）、name（名称）、qty（数量）、supplier（供应商）、params（参数）</div>
+                        </div>
+                        <button class="btn btn-primary" onclick="importBom()">📥 导入 BOM 数据</button>
+                    </div>
+
+                    <!-- Excel 导入 -->
+                    <div id="modeExcel" style="display:none;">
+                        <div class="form-group">
+                            <label class="form-label">选择 Excel 文件</label>
+                            <input type="file" class="form-input" id="bomExcel" accept=".xlsx,.xls" onchange="previewExcel()">
+                            <div class="text-muted mt-sm">支持 .xlsx / .xls 格式，第一行为表头，需包含：零件号、名称、数量、供应商等列</div>
+                        </div>
+                        <div id="excelPreview"></div>
+                        <button class="btn btn-primary" onclick="importExcelBom()">📥 导入 Excel BOM</button>
+                    </div>
+
+                    <!-- PLM 对接 -->
+                    <div id="modePlm" style="display:none;">
+                        <div class="form-group">
+                            <label class="form-label">PLM 系统 API 地址</label>
+                            <input type="text" class="form-input" id="plmUrl" placeholder="https://plm.company.com/api/bom/export" style="width:400px;">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">API Token（可选）</label>
+                            <input type="text" class="form-input" id="plmToken" placeholder="Bearer xxx" style="width:400px;">
+                        </div>
+                        <button class="btn btn-primary" onclick="importFromPlm()">📥 从 PLM 拉取 BOM</button>
+                    </div>
+                </div>
+
+                <div id="importResult" class="mt-md"></div>
+
+                <div class="card mt-md" id="bomPreviewCard" style="display:none;">
+                    <div class="card-header"><span class="card-title">📦 已导入 BOM 清单</span></div>
+                    <div id="bomPreviewTable"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+    <script src="/js/common.js"></script>
+    <script>
+        API = '';
+        let currentMode = 'json';
+
+        function switchMode(mode, tabEl) {
+            currentMode = mode;
+            document.querySelectorAll('.section-tab').forEach(t => t.classList.remove('active'));
+            tabEl.classList.add('active');
+            document.getElementById('modeJson').style.display = mode === 'json' ? 'block' : 'none';
+            document.getElementById('modeExcel').style.display = mode === 'excel' ? 'block' : 'none';
+            document.getElementById('modePlm').style.display = mode === 'plm' ? 'block' : 'none';
+        }
+
+        async function loadProducts() {
+            try {
+                const r = await fetch(API + '/api/skills/smart-fetch/product/catalog');
+                const d = await r.json();
+                const sel = document.getElementById('bomProductId');
+                sel.innerHTML = '<option value="">-- 请选择产品 --</option>' +
+                    (d.data||[]).map(p => `<option value="${p.productId}">${p.productId} - ${p.name}</option>`).join('');
+            } catch (e) { showToast('加载产品失败: ' + e.message, 'error'); }
+        }
+
+        async function importBom() {
+            const productId = document.getElementById('bomProductId').value;
+            if (!productId) return showToast('请先选择产品', 'error');
+            let bomData;
+            try {
+                bomData = JSON.parse(document.getElementById('bomJson').value);
+            } catch (e) { return showToast('JSON 格式错误', 'error'); }
+
+            const resultEl = document.getElementById('importResult');
+            resultEl.innerHTML = '<div class="text-muted">⏳ 导入中...</div>';
+            try {
+                const r = await fetch(API + '/api/skills/smart-fetch/bom/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ productId, bomData })
+                });
+                const d = await r.json();
+                if (d.success) {
+                    resultEl.innerHTML = `<div style="color:var(--success);">✅ 导入成功！共 ${bomData.length} 个零件，解析出 ${Object.keys(d.data.parsed.specs||{}).length} 个参数</div>`;
+                    previewBom(productId);
+                } else {
+                    resultEl.innerHTML = `<div style="color:var(--danger);">❌ ${d.message}</div>`;
+                }
+            } catch (e) {
+                resultEl.innerHTML = `<div style="color:var(--danger);">❌ ${e.message}</div>`;
+            }
+        }
+
+        function previewExcel() {
+            const file = document.getElementById('bomExcel').files[0];
+            if (!file) return;
+            if (typeof XLSX === 'undefined') {
+                const s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+                s.onload = () => processExcel(file);
+                document.head.appendChild(s);
+            } else {
+                processExcel(file);
+            }
+        }
+
+        function processExcel(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet);
+                const preview = document.getElementById('excelPreview');
+                if (json.length === 0) return preview.innerHTML = '<div class="text-muted">空文件</div>';
+                const headers = Object.keys(json[0]);
+                preview.innerHTML = `
+                    <div class="text-muted" style="margin-bottom:8px;">预览前5行，共 ${json.length} 行</div>
+                    <table class="data-table">
+                        <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+                        <tbody>${json.slice(0,5).map(row => `<tr>${headers.map(h => `<td>${row[h]||''}</td>`).join('')}</tr>`).join('')}</tbody>
+                    </table>
+                `;
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function importExcelBom() {
+            const productId = document.getElementById('bomProductId').value;
+            if (!productId) return showToast('请先选择产品', 'error');
+            const file = document.getElementById('bomExcel').files[0];
+            if (!file) return showToast('请选择 Excel 文件', 'error');
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet);
+                const bomData = json.map(row => ({
+                    partNo: row['零件号'] || row['partNo'] || row['Part No'] || '',
+                    name: row['名称'] || row['name'] || row['Name'] || '',
+                    qty: row['数量'] || row['qty'] || row['Qty'] || 1,
+                    supplier: row['供应商'] || row['supplier'] || '',
+                    category: row['分类'] || row['category'] || ''
+                }));
+                const r = await fetch(API + '/api/skills/smart-fetch/bom/import', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ productId, bomData })
+                });
+                const d = await r.json();
+                document.getElementById('importResult').innerHTML = d.success
+                    ? `<div style="color:var(--success);">✅ 导入成功！共 ${bomData.length} 个BOM零件</div>`
+                    : `<div style="color:var(--danger);">❌ ${d.message}</div>`;
+                if (d.success) previewBom(productId);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function importFromPlm() {
+            const productId = document.getElementById('bomProductId').value;
+            const url = document.getElementById('plmUrl').value;
+            if (!productId || !url) return showToast('请填写完整信息', 'error');
+            showToast('PLM 对接功能开发中，请暂时使用 JSON 或 Excel 导入', 'error');
+        }
+
+        async function previewBom(productId) {
+            try {
+                const r = await fetch(API + '/api/skills/smart-fetch/product/catalog');
+                const d = await r.json();
+                const product = (d.data||[]).find(p => p.productId === productId);
+                if (!product || !product.bom || product.bom.length === 0) return;
+                const card = document.getElementById('bomPreviewCard');
+                card.style.display = 'block';
+                document.getElementById('bomPreviewTable').innerHTML = `
+                    <table class="data-table">
+                        <thead><tr><th>零件号</th><th>名称</th><th>数量</th><th>供应商</th></tr></thead>
+                        <tbody>${product.bom.map(b => `<tr><td>${b.partNo}</td><td>${b.name}</td><td>${b.qty}</td><td>${b.supplier}</td></tr>`).join('')}</tbody>
+                    </table>
+                    <div class="text-muted mt-md">共 ${product.bom.length} 个零件，${Object.keys(product.specs||{}).length} 个参数维度</div>
+                `;
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', loadProducts);
+    </script>
+</body>
+</html>

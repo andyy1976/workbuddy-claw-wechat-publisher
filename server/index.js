@@ -38,6 +38,10 @@ const styleRoutes = require('./routes/style');
 const chatRoutes = require('./routes/chat');
 const modelsRoutes = require('./routes/models');  // 模型管理路由
 const tasksRoutes = require('./routes/tasks');  // 任务管理路由
+const methodologyRoutes = require('./routes/methodology');
+const methodologyPipelineRoutes = require('./routes/methodology-pipeline');
+const skillsRoutes = require('./routes/skills');
+const scheduler = require('./services/scheduler');
 
 app.use('/api/content', contentRoutes);
 app.use('/api/cms', cmsRoutes);
@@ -47,6 +51,9 @@ app.use('/api/style', styleRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/models', modelsRoutes);  // 注册模型管理路由
 app.use('/api/tasks', tasksRoutes);  // 注册任务管理路由
+app.use('/api/methodology', methodologyRoutes);
+app.use('/api/methodology', methodologyPipelineRoutes);
+app.use('/api/skills', skillsRoutes);
 
 // ── 健康检查 ──────────────────────────────────────
 app.get('/api/health', (req, res) => {
@@ -82,4 +89,11 @@ app.listen(PORT, '0.0.0.0', () => {
 ║   CMS:  http://localhost:${PORT}/api/cms/...      ║
 ╚════════════════════════════════════════════════╝
     `);
+
+  // 启动定时任务调度器
+  scheduler.startScheduler().then(() => {
+    console.log('[Scheduler] 定时任务调度器已启动');
+  }).catch(e => {
+    console.error('[Scheduler] 启动失败:', e.message);
+  });
 });

@@ -37,11 +37,14 @@
     "express": "^5.2.1",
     "form-data": "^4.0.5",
     "googleapis": "^171.4.0",
+    "marked": "^18.0.4",
     "minimist": "^1.2.8",
     "multer": "^2.1.1",
     "mysql2": "^3.22.3",
     "node-cron": "^4.2.1",
     "playwright": "^1.59.1",
+    "pptxgenjs": "^4.0.1",
+    "tencentcloud-sdk-nodejs-hunyuan": "^4.1.188",
     "uuid": "^14.0.0"
   },
   "directories": {

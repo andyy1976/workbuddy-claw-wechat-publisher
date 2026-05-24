@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>定时任务管理 - WorkBuddy</title>
+    <link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <h1>🚀 WorkBuddy</h1>
+                <p>内容数字员工平台 v6.0</p>
+            </div>
+            <nav class="sidebar-nav" id="mainNav"></nav>
+            <div class="sidebar-footer">
+                <div class="status"><span class="dot"></span><span id="serverStatus">服务运行中</span></div>
+            </div>
+        </aside>
+        <div class="main">
+            <header class="topbar">
+                <h2>⏰ 定时任务管理</h2>
+                <div class="topbar-actions">
+                    <button class="btn btn-sm btn-primary" onclick="showAddTaskModal()">➕ 新建任务</button>
+                    <button class="btn btn-sm" onclick="loadTasks()">🔄 刷新</button>
+                    <button class="btn btn-sm btn-outline" onclick="checkHealth()">健康检查</button>
+                </div>
+            </header>
+            <div class="content">
+                <div id="taskList">
+                    <div class="text-muted" style="padding:40px;text-align:center;">加载中...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 任务编辑弹窗 -->
+    <div id="taskModal" class="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:500px;max-width:90vw;">
+            <h3 id="modalTitle">新建任务</h3>
+            <form id="taskForm">
+                <input type="hidden" id="taskId">
+                <div class="form-group"><label class="form-label">任务名称</label><input type="text" class="form-input" id="taskName" placeholder="如 每日9点采集"></div>
+                <div class="form-group"><label class="form-label">关键词（逗号分隔）</label><input type="text" class="form-input" id="taskKeywords" placeholder="AI, 数字化转型, 智能制造"></div>
+                <div class="form-group"><label class="form-label">Cron 表达式</label><input type="text" class="form-input" id="taskSchedule" placeholder="0 9 * * *"></div>
+                <div class="form-group"><label class="form-label">发布平台</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" id="platWechat" value="wechat"> 微信公众号</label>
+                        <label><input type="checkbox" id="platCms" value="cms"> CMS</label>
+                        <label><input type="checkbox" id="platEmail" value="email"> 邮件</label>
+                    </div>
+                </div>
+                <div class="form-group"><label class="form-label">写作风格</label>
+                    <select class="form-select" id="taskStyle">
+                        <option value="professional">专业深度</option>
+                        <option value="khazix">卡兹克风格</option>
+                        <option value="casual">轻松故事</option>
+                        <option value="technical">硬核技术</option>
+                    </select>
+                </div>
+                <div style="margin-top:16px;display:flex;gap:8px;">
+                    <button type="button" class="btn btn-primary" onclick="saveTask()">💾 保存</button>
+                    <button type="button" class="btn" onclick="closeModal()">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 日志查看弹窗 -->
+    <div id="logsModal" class="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:700px;max-width:90vw;max-height:80vh;overflow-y:auto;">
+            <h3 id="logsModalTitle">任务执行日志</h3>
+            <div id="logsContent" style="margin-top:16px;font-family:monospace;font-size:13px;background:var(--bg);padding:12px;border-radius:6px;max-height:60vh;overflow-y:auto;"></div>
+            <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+                <button type="button" class="btn" onclick="closeLogsModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+    <script src="/js/common.js"></script>
+    <script>
+        API = '/api/tasks';
+
+        // ── Cron 表达式校验 ──────────────────────
+        function validateCronExpression(expr) {
+            if (!expr || typeof expr !== 'string') {
+                return { valid: false, message: 'Cron 表达式不能为空' };
+            }
+            
+            const parts = expr.trim().split(/\s+/);
+            if (parts.length !== 5) {
+                return { valid: false, message: 'Cron 表达式必须包含5个字段（分 时 日 月 周）' };
+            }
+            
+            const [minute, hour, day, month, weekday] = parts;
+            
+            // 校验数字字段的辅助函数
+            const checkField = (field, min, max, fieldName) => {
+                if (field === '*') return { valid: true };
+                
+                // 支持逗号分隔的多个值
+                const values = field.split(',');
+                for (const val of values) {
+                    // 支持 */n 格式
+                    if (val.startsWith('*/')) {
+                        const step = parseInt(val.substring(2));
+                        if (isNaN(step) || step < 1) {
+                            return { valid: false, message: `${fieldName} 步长值无效` };
+                        }
+                        continue;
+                    }
+                    
+                    // 支持 a-b 范围格式
+                    if (val.includes('-')) {
+                        const [start, end] = val.split('-').map(Number);
+                        if (isNaN(start) || isNaN(end) || start < min || end > max || start > end) {
+                            return { valid: false, message: `${fieldName} 范围 ${val} 无效（应在 ${min}-${max} 之间）` };
+                        }
+                        continue;
+                    }
+                    
+                    // 普通数字
+                    const num = parseInt(val);
+                    if (isNaN(num) || num < min || num > max) {
+                        return { valid: false, message: `${fieldName} 值 ${val} 无效（应在 ${min}-${max} 之间）` };
+                    }
+                }
+                
+                return { valid: true };
+            };
+            
+            let result;
+            result = checkField(minute, 0, 59, '分钟');
+            if (!result.valid) return result;
+            
+            result = checkField(hour, 0, 23, '小时');
+            if (!result.valid) return result;
+            
+            result = checkField(day, 1, 31, '日期');
+            if (!result.valid) return result;
+            
+            result = checkField(month, 1, 12, '月份');
+            if (!result.valid) return result;
+            
+            result = checkField(weekday, 0, 7, '星期');
+            if (!result.valid) return result;
+            
+            return { valid: true };
+        }
+
+        async function loadTasks() {
+            const container = document.getElementById('taskList');
+            container.innerHTML = '<div class="text-muted" style="padding:40px;text-align:center;">加载中...</div>';
+            try {
+                const r = await fetch(API);
+                const d = await r.json();
+                if (d.success && d.data) {
+                    renderTasks(d.data);
+                } else {
+                    container.innerHTML = '<div class="text-muted" style="padding:40px;text-align:center;">' + (d.message || '加载失败') + '</div>';
+                }
+            } catch (e) {
+                container.innerHTML = '<div class="text-muted" style="padding:40px;text-align:center;">请求失败: ' + e.message + '</div>';
+                showToast('请求失败: ' + e.message, 'error');
+            }
+        }
+
+        function renderTasks(tasks) {
+            const container = document.getElementById('taskList');
+            if (!tasks || tasks.length === 0) {
+                container.innerHTML = '<div class="text-muted" style="padding:40px;text-align:center;">暂无任务，点击"新建任务"开始</div>';
+                return;
+            }
+            container.innerHTML = tasks.map(task => `
+                <div class="card" style="margin-bottom:12px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <div style="font-weight:600;font-size:15px;">${task.name || '未命名'}</div>
+                            <div class="text-muted" style="margin-top:6px;font-size:13px;">
+                                关键词: ${(task.keywords||[]).join(', ')} |
+                                调度: ${task.schedule || '-'} |
+                                平台: ${(task.platforms||[]).join(', ')} |
+                                状态: <span class="badge ${task.enabled ? 'badge-success' : 'badge-danger'}">${task.enabled ? '已启用' : '已禁用'}</span>
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:6px;">
+                            <button class="btn btn-sm" onclick="runTask('${task.id}')">▶ 执行</button>
+                            <button class="btn btn-sm ${task.enabled ? 'btn-outline' : 'btn-success'}" onclick="toggleTask('${task.id}', ${!task.enabled})">${task.enabled ? '⏸ 禁用' : '▶ 启用'}</button>
+                            <button class="btn btn-sm btn-outline" onclick="viewLogs('${task.id}')">📋 日志</button>
+                            <button class="btn btn-sm" onclick="editTask('${task.id}')">✏ 编辑</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteTask('${task.id}')">🗑 删除</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showAddTaskModal() {
+            document.getElementById('modalTitle').textContent = '新建任务';
+            document.getElementById('taskForm').reset();
+            document.getElementById('taskId').value = '';
+            document.getElementById('taskModal').style.display = 'flex';
+        }
+
+        async function editTask(id) {
+            try {
+                const r = await fetch(API + '/' + encodeURIComponent(id));
+                const d = await r.json();
+                if (d.success && d.data) {
+                    const task = d.data;
+                    document.getElementById('modalTitle').textContent = '编辑任务';
+                    document.getElementById('taskId').value = task.id;
+                    document.getElementById('taskName').value = task.name;
+                    document.getElementById('taskKeywords').value = (task.keywords||[]).join(', ');
+                    document.getElementById('taskSchedule').value = task.schedule;
+                    document.getElementById('taskStyle').value = task.style || 'professional';
+                    document.querySelectorAll('.checkbox-group input').forEach(cb => {
+                        cb.checked = (task.platforms||[]).includes(cb.value);
+                    });
+                    document.getElementById('taskModal').style.display = 'flex';
+                } else {
+                    showToast('加载失败: ' + (d.message || '任务不存在'), 'error');
+                }
+            } catch (e) {
+                showToast('加载失败: ' + e.message, 'error');
+            }
+        }
+
+        async function saveTask() {
+            const id = document.getElementById('taskId').value;
+            const name = document.getElementById('taskName').value.trim();
+            const keywords = document.getElementById('taskKeywords').value.split(/,\s*/).filter(Boolean);
+            const schedule = document.getElementById('taskSchedule').value.trim();
+            const platforms = Array.from(document.querySelectorAll('.checkbox-group input:checked')).map(cb => cb.value);
+            const style = document.getElementById('taskStyle').value;
+
+            if (!name || !schedule) {
+                return showToast('名称和调度时间为必填项', 'error');
+            }
+
+            // 校验 Cron 表达式
+            const validation = validateCronExpression(schedule);
+            if (!validation.valid) {
+                return showToast('Cron表达式错误: ' + validation.message, 'error');
+            }
+
+            const payload = { name, keywords, schedule, platforms, style, enabled: true };
+
+            try {
+                const url = id ? `${API}/${id}` : API;
+                const method = id ? 'PUT' : 'POST';
+                const r = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const d = await r.json();
+                if (d.success) {
+                    showToast('✅ 任务已保存', 'success');
+                    closeModal();
+                    loadTasks();
+                } else {
+                    showToast('保存失败: ' + d.message, 'error');
+                }
+            } catch (e) {
+                showToast('请求失败: ' + e.message, 'error');
+            }
+        }
+
+        async function toggleTask(id, enabled) {
+            try {
+                await fetch(`${API}/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled })
+                });
+                showToast(enabled ? '任务已启用' : '任务已禁用', 'success');
+                loadTasks();
+            } catch (e) {
+                showToast('操作失败: ' + e.message, 'error');
+            }
+        }
+
+        async function runTask(id) {
+            try {
+                const r = await fetch(`${API}/${id}/run`, { method: 'POST' });
+                const d = await r.json();
+                showToast(d.success ? '✅ 任务已触发执行' : '执行失败: ' + d.message, d.success ? 'success' : 'error');
+            } catch (e) {
+                showToast('请求失败: ' + e.message, 'error');
+            }
+        }
+
+        async function deleteTask(id) {
+            if (!confirm('确定删除此任务吗？')) return;
+            try {
+                const r = await fetch(`${API}/${id}`, { method: 'DELETE' });
+                const d = await r.json();
+                if (d.success) {
+                    showToast('✅ 任务已删除', 'success');
+                    loadTasks();
+                } else {
+                    showToast('删除失败: ' + d.message, 'error');
+                }
+            } catch (e) {
+                showToast('请求失败: ' + e.message, 'error');
+            }
+        }
+
+        // 查看任务执行日志
+        async function viewLogs(id) {
+            try {
+                const r = await fetch(`${API}/${id}/logs`);
+                const d = await r.json();
+                if (d.success && d.data) {
+                    displayLogs(id, d.data);
+                } else {
+                    showToast('获取日志失败: ' + (d.message || '未知错误'), 'error');
+                }
+            } catch (e) {
+                showToast('请求失败: ' + e.message, 'error');
+            }
+        }
+
+        // 显示日志
+        function displayLogs(taskId, logs) {
+            const title = document.getElementById('logsModalTitle');
+            const content = document.getElementById('logsContent');
+            
+            title.textContent = `任务执行日志 (${taskId})`;
+            
+            if (!logs || logs.length === 0) {
+                content.innerHTML = '<div style="color:var(--text2);text-align:center;padding:20px;">暂无执行记录</div>';
+            } else {
+                content.innerHTML = logs.map(log => `
+                    <div style="margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                            <span style="font-weight:600;color:var(--accent);">${new Date(log.startTime).toLocaleString('zh-CN')}</span>
+                            <span class="badge ${log.status === 'completed' ? 'badge-success' : log.status === 'running' ? 'badge-warning' : 'badge-error'}">${log.status}</span>
+                        </div>
+                        <div style="color:var(--text);">
+                            ${(log.progress || []).map(p => `
+                                <div style="margin:4px 0;padding-left:12px;border-left:2px solid var(--border);">
+                                    <span style="color:var(--text2);font-size:11px;">${new Date(p.time).toLocaleTimeString('zh-CN')}</span>
+                                    <span style="margin-left:8px;">${p.message}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            document.getElementById('logsModal').style.display = 'flex';
+        }
+
+        function closeLogsModal() {
+            document.getElementById('logsModal').style.display = 'none';
+        }
+
+        function closeModal() {
+            document.getElementById('taskModal').style.display = 'none';
+        }
+
+        loadTasks();
+    </script>
+</body>
+</html>

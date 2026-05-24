@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智能对话</title>
+  <link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+  <div class="app">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <h1>🚀 WorkBuddy</h1>
+                <p>内容数字员工平台 v6.0</p>
+            </div>
+            <nav class="sidebar-nav" id="mainNav"></nav>
+            <div class="sidebar-footer">
+                <div class="status"><span class="dot"></span><span id="serverStatus">服务运行中</span></div>
+            </div>
+        </aside>
+    <div class="main">
+      <header class="topbar">
+        <h2>💬 智能对话</h2>
+        <div class="topbar-actions"><button class="btn btn-outline" onclick="healthCheck()">健康检查</button></div>
+      </header>
+      <div class="content">
+        <div class="form-row">
+          <div class="form-group" style="flex:1">
+            <input type="text" id="chatInput" placeholder="输入消息，Ctrl+Enter发送..." onkeydown="handleChatKeydown(event)">
+            <button class="btn btn-primary" onclick="sendMessage()">发送</button>
+          </div>
+          <div class="form-group">
+            <select id="chatModel"></select>
+          </div>
+        </div>
+        <div id="chatMessages" class="chat-messages">
+          <div class="chat-msg chat-msg-assistant">
+            <div class="chat-bubble">你好！我是智能助手，有什么可以帮你的吗？</div>
+          </div>
+        </div>
+        <div style="margin-top:1rem;text-align:center">
+          <button class="btn btn-outline" onclick="clearChat()">清空对话</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="toast" class="toast"></div>
+  <script src="/js/common.js"></script>
+  <script>
+    async function loadModels() {
+      try {
+        const res = await fetch('/api/models/list');
+        const data = await res.json();
+        const models = data.models || data || [];
+        document.getElementById('chatModel').innerHTML = models.map(m =>
+          `<option value="${m.id||m.name||''}">${m.name||m.id||''}</option>`
+        ).join('') || '<option value="default">默认模型</option>';
+      } catch { document.getElementById('chatModel').innerHTML = '<option value="default">默认模型</option>'; }
+    }
+
+    function handleChatKeydown(e) {
+      if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); sendMessage(); }
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('chatInput');
+      const msg = input.value.trim();
+      if (!msg) return;
+      const model = document.getElementById('chatModel').value;
+      const msgs = document.getElementById('chatMessages');
+      msgs.innerHTML += `<div class="chat-msg chat-msg-user"><div class="chat-bubble">${escHtml(msg)}</div></div>`;
+      input.value = '';
+      const loadingId = 'loading-' + Date.now();
+      msgs.innerHTML += `<div class="chat-msg chat-msg-assistant" id="${loadingId}"><div class="chat-bubble">思考中...</div></div>`;
+      msgs.scrollTop = msgs.scrollHeight;
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: msg, model })
+        });
+        const data = await res.json();
+        document.getElementById(loadingId).querySelector('.chat-bubble').textContent = data.reply || data.content || JSON.stringify(data);
+      } catch (e) {
+        document.getElementById(loadingId).querySelector('.chat-bubble').textContent = '错误: ' + e.message;
+      }
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    function clearChat() {
+      document.getElementById('chatMessages').innerHTML =
+        '<div class="chat-msg chat-msg-assistant"><div class="chat-bubble">对话已清空。有什么可以帮你的吗？</div></div>';
+    }
+
+    function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    document.addEventListener('DOMContentLoaded', loadModels);
+  </script>
+</body>
+</html>

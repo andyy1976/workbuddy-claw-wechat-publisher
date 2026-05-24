@@ -9,12 +9,14 @@
 const express = require('express');
 const router = express.Router();
 const llm = require('../services/llm');
+const promptBuilder = require('../services/prompt-builder');
+const { prePublishCheck } = require('../services/pre-publish-check');
 const productSvc = require('../services/product');
 
 // ── 生成企业内容 ──────────────────────────────────
 router.post('/generate', async (req, res) => {
     try {
-        const { topic, style, platform, productId, context, wordCount } = req.body;
+        const { topic, style, platform, productId, context, wordCount, cmsContext, plmContext } = req.body;
         
         if (!topic) {
             return res.status(400).json({ success: false, message: '缺少主题(topic)' });
@@ -26,30 +28,55 @@ router.post('/generate', async (req, res) => {
             productData = productSvc.getFullProductData(productId);
         }
         
-        const content = await llm.generateEnterpriseContent({
+        // ── 方法论增强：构建带三条铁律的提示词 ────────────────────────
+        const messages = promptBuilder.buildMessages({
             topic,
             style: style || 'professional',
             platform: platform || 'wechat',
-            productData,
-            context,
-            wordCount: wordCount || 2000
+            wordCount: wordCount || 2000,
+            cmsContext: cmsContext || {},
+            plmContext: plmContext || {},
+            goodAngleHint: context || '',
+            existingAngles: []
         });
         
+        // 调用 LLM（直接从 prompt-builder 构建的消息，不走 generateEnterpriseContent）
+        const rawContent = await llm.callLLM(messages, {
+            temperature: style === 'khazix' ? 0.85 : 0.7,
+            maxTokens: Math.ceil((wordCount || 2000) * 1.5)
+        });
+        
+        // ── 发布前正则兜底检查 ─────────────────────────────────────
+        const checkResult = prePublishCheck(rawContent, {
+            topic: topic,
+            angle: ''
+        });
+        
+        // 如果有严重错误，警告但不阻止（转人工审核）
+        if (!checkResult.pass) {
+            console.warn('[Content] 发布前检查未通过:', checkResult.errors.join('; '));
+        }
+        
         // 同时生成标题建议
-        const titles = await llm.generateTitles(content, platform || 'wechat');
+        const titles = await llm.generateTitles(rawContent, platform || 'wechat');
         
         res.json({
             success: true,
             data: {
-                content,
+                content: rawContent,
                 titles,
                 metadata: {
                     topic,
                     style,
                     platform,
-                    wordCount: content.length,
+                    wordCount: rawContent.length,
                     productUsed: !!productId,
-                    generatedAt: new Date().toISOString()
+                    generatedAt: new Date().toISOString(),
+                    methodologyCheck: {
+                        passed: checkResult.pass,
+                        errors: checkResult.errors,
+                        warnings: checkResult.warnings
+                    }
                 }
             }
         });

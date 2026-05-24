@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>内容生成 - WorkBuddy</title>
+    <link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <h1>🚀 WorkBuddy</h1>
+                <p>内容数字员工平台 v6.0</p>
+            </div>
+            <nav class="sidebar-nav" id="mainNav"></nav>
+            <div class="sidebar-footer">
+                <div class="status"><span class="dot"></span><span id="serverStatus">服务运行中</span></div>
+            </div>
+        </aside>
+        <div class="main">
+            <header class="topbar">
+                <h2>✍️ 内容生成</h2>
+                <div class="topbar-actions">
+                    <button class="btn btn-sm" onclick="checkHealth()">🔍 健康检查</button>
+                </div>
+            </header>
+            <div class="content">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">📝 内容主题</label>
+                        <input class="form-input" id="genTopic" placeholder="例:MES系统如何帮助工厂提升产能23%">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">🎨 写作风格</label>
+                        <select class="form-select" id="genStyle">
+                            <option value="professional">专业深度(白皮书风格)</option>
+                            <option value="khazix">卡兹克风格(去AI味极致)</option>
+                            <option value="casual">轻松故事(茶歇闲聊)</option>
+                            <option value="technical">硬核技术(原理级)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">📱 目标平台（可多选）</label>
+                        <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:8px;">
+                            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                                <input type="checkbox" name="genPlatform" value="wechat" checked> 微信公众号
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                                <input type="checkbox" name="genPlatform" value="xiaohongshu"> 小红书
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                                <input type="checkbox" name="genPlatform" value="douyin"> 抖音文案
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                                <input type="checkbox" name="genPlatform" value="cms"> 企业官网CMS
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">📊 关联产品数据(可选)</label>
+                        <select class="form-select" id="genProductId">
+                            <option value="">不关联(纯文本生成)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">📏 目标字数</label>
+                        <input class="form-input" id="genWordCount" type="number" value="2000" min="200" max="5000">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label"> </label>
+                        <button class="btn btn-primary" id="btnGenerate" onclick="generateContent()">🚀 开始生成</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">💡 补充信息(可选)</label>
+                    <input class="form-input" id="genContext" placeholder="例:强调我们的MES系统在汽车零部件行业的成功案例">
+                </div>
+
+                <div id="genLoading" class="loading" style="display:none;">
+                    <div class="spinner"></div>
+                    <span>AI正在创作中,请稍候...</span>
+                </div>
+
+                <div class="editor-container" id="genOutput" style="display:none;">
+                    <div class="editor-panel">
+                        <div class="editor-toolbar">
+                            <span class="title">📋 生成结果</span>
+                            <div style="margin-left:auto;">
+                                <button class="btn btn-sm" onclick="copyText('genContent')">📋 复制</button>
+                                <button class="btn btn-sm" onclick="sendToDeaiify()">🧹 去AI味</button>
+                                <button class="btn btn-sm btn-success" onclick="sendToPublish()">📤 推送发布</button>
+                            </div>
+                        </div>
+                        <div class="editor-body">
+                            <pre id="genContent"></pre>
+                        </div>
+                    </div>
+                    <div class="editor-panel">
+                        <div class="editor-toolbar">
+                            <span class="title">📝 标题建议</span>
+                        </div>
+                        <div class="editor-body">
+                            <pre id="genTitles" style="color:var(--accent2);"></pre>
+                        </div>
+                        <div class="editor-toolbar" style="border-top:1px solid var(--border); border-bottom:none;">
+                            <span class="title">📊 生成信息</span>
+                        </div>
+                        <div class="editor-body">
+                            <pre id="genMeta" style="color:var(--text2); font-size:12px;"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="toast" id="toast"></div>
+    <script src="/js/common.js"></script>
+    <script>
+    async function generateContent() {
+        const topic = document.getElementById('genTopic').value.trim();
+        if (!topic) return showToast('请输入内容主题', 'error');
+        const platforms = Array.from(document.querySelectorAll('input[name="genPlatform"]:checked')).map(cb => cb.value);
+        if (platforms.length === 0) return showToast('请至少选择一个目标平台', 'error');
+        const btn = document.getElementById('btnGenerate');
+        btn.disabled = true;
+        document.getElementById('genLoading').style.display = 'flex';
+        document.getElementById('genOutput').style.display = 'none';
+        try {
+            const r = await fetch('/api/content/generate', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ topic, style: document.getElementById('genStyle').value, platform: platforms[0], platforms, productId: document.getElementById('genProductId').value || null, context: document.getElementById('genContext').value, wordCount: parseInt(document.getElementById('genWordCount').value) || 2000 })
+            });
+            const d = await r.json();
+            if (d.success) {
+                document.getElementById('genContent').textContent = d.data.content;
+                document.getElementById('genTitles').textContent = d.data.titles;
+                document.getElementById('genMeta').textContent = JSON.stringify(d.data.metadata, null, 2);
+                document.getElementById('genOutput').style.display = 'grid';
+                // 存储到 localStorage，供其他页面使用
+                localStorage.setItem('generatedContent', d.data.content);
+                localStorage.setItem('generatedTitles', d.data.titles);
+                localStorage.setItem('generatedMeta', JSON.stringify(d.data.metadata));
+                showToast('内容生成成功!');
+            } else { showToast(d.message || '生成失败', 'error'); }
+        } catch (e) { showToast('请求失败: ' + e.message, 'error'); }
+        finally { btn.disabled = false; document.getElementById('genLoading').style.display = 'none'; }
+    }
+
+    function sendToDeaiify() {
+        const content = document.getElementById('genContent').textContent;
+        if (!content) return showToast('请先生成内容', 'error');
+        localStorage.setItem('deaiifyInput', content);
+        location.href = '/deaiify.html';
+    }
+
+    function sendToPublish() {
+        const content = document.getElementById('genContent').textContent;
+        const title = document.getElementById('genTitles').textContent.split('\n')[0] || document.getElementById('genTopic').value;
+        if (!content) return showToast('请先生成内容', 'error');
+        localStorage.setItem('publishTitle', title);
+        localStorage.setItem('publishContent', content);
+        location.href = '/publish.html';
+    }
+    async function loadProductOptions() {
+        try {
+            const r = await fetch(API + '/api/product/list');
+            const d = await r.json();
+            const select = document.getElementById('genProductId');
+            while (select.options.length > 1) select.remove(1);
+            if (d.success && d.data.length) {
+                d.data.forEach(p => { const opt = document.createElement('option'); opt.value = p.id || p.name; opt.textContent = p.name || p.id; select.appendChild(opt); });
+            }
+        } catch (e) {}
+    }
+    document.addEventListener('DOMContentLoaded', loadProductOptions);
+    </script>
+</body>
+</html>

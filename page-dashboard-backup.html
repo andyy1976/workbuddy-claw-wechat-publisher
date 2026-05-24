@@ -1,0 +1,78 @@
+<div class="page active" id="page-dashboard">
+                    <div class="stats-row">
+                        <div class="stat-card">
+                            <div class="label">今日生成</div>
+                            <div class="value" id="statGenerated">0</div>
+                            <div class="change up">内容数字员工</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="label">去AI味优化</div>
+                            <div class="value" id="statDeAI">0</div>
+                            <div class="change up">卡兹克风格</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="label">已发布CMS</div>
+                            <div class="value" id="statPublished">0</div>
+                            <div class="change text-muted">多平台分发</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="label">产品数据源</div>
+                            <div class="value" id="statProducts">0</div>
+                            <div class="change text-accent">BOM/工艺/质量</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">⚡ 快速开始</span>
+                        </div>
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                            <div class="btn" style="flex-direction:column; padding:20px; height:auto; justify-content:center;" onclick="navigateTo('generate')">
+                                <span style="font-size:24px; margin-bottom:8px;">✍️</span>
+                                <span>企业内容生成</span>
+                                <span class="text-sm text-muted">BOM数据驱动</span>
+                            </div>
+                            <div class="btn" style="flex-direction:column; padding:20px; height:auto; justify-content:center;" onclick="navigateTo('deaiify')">
+                                <span style="font-size:24px; margin-bottom:8px;">🧹</span>
+                                <span>去AI味优化</span>
+                                <span class="text-sm text-muted">卡兹克风格</span>
+                            </div>
+                            <div class="btn" style="flex-direction:column; padding:20px; height:auto; justify-content:center;" onclick="navigateTo('product')">
+                                <span style="font-size:24px; margin-bottom:8px;">🏭</span>
+                                <span>产品数据管理</span>
+                                <span class="text-sm text-muted">BOM/工艺/质量</span>
+                            </div>
+                            <div class="btn" style="flex-direction:column; padding:20px; height:auto; justify-content:center;" onclick="navigateTo('publish')">
+                                <span style="font-size:24px; margin-bottom:8px;">📤</span>
+                                <span>一键发布</span>
+                                <span class="text-sm text-muted">CMS+多平台</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">🔧 平台能力</span>
+                        </div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div>
+                                <div class="fw-600" style="margin-bottom: 8px;">内容生成引擎</div>
+                                <ul style="font-size:13px; color:var(--text2); padding-left:16px; line-height:2;">
+                                    <li>企业产品数据(BOM/工艺/质量)驱动内容生成</li>
+                                    <li>4种写作风格:卡兹克/专业深度/轻松故事/硬核技术</li>
+                                    <li>4种平台适配:公众号/小红书/抖音/CMS</li>
+                                    <li>自动去AI味:消除"首先/其次/总之"等AI痕迹</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <div class="fw-600" style="margin-bottom: 8px;">发布集成</div>
+                                <ul style="font-size:13px; color:var(--text2); padding-left:16px; line-height:2;">
+                                    <li>SCSAICMS双向集成(栏目匹配+文章推送)</li>
+                                    <li>微信公众号草稿箱发布</li>
+                                    <li>多平台批量分发(微信/知乎/小红书)</li>
+                                    <li>信源采集→AI评分→精选→发布完整流水线</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>

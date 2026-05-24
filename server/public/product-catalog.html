@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>产品库管理 - WorkBuddy</title>
+    <link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <h1>🚀 WorkBuddy</h1>
+                <p>内容数字员工平台 v6.0</p>
+            </div>
+            <nav class="sidebar-nav" id="mainNav"></nav>
+            <div class="sidebar-footer">
+                <div class="status"><span class="dot"></span><span id="serverStatus">服务运行中</span></div>
+            </div>
+        </aside>
+        <div class="main">
+            <header class="topbar">
+                <h2>📦 产品库管理</h2>
+                <div class="topbar-actions">
+                    <button class="btn btn-sm btn-primary" onclick="showAddModal()">➕ 添加产品</button>
+                    <button class="btn btn-sm" onclick="loadCatalog()">🔄 刷新</button>
+                </div>
+            </header>
+            <div class="content">
+                <div class="flex-between mb-md">
+                    <span id="catalogStats" class="text-muted">加载中...</span>
+                    <input type="text" class="form-input" id="searchInput" placeholder="🔍 搜索产品..." style="width:240px;" oninput="filterTable()">
+                </div>
+                <div id="catalogTable"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加/编辑产品弹窗 -->
+    <div id="productModal" class="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:500px;max-width:90vw;">
+            <h3 id="modalTitle">添加产品</h3>
+            <div class="form-group"><label class="form-label">产品ID</label><input type="text" class="form-input" id="inpProductId" placeholder="如 SENSOR-PRO"></div>
+            <div class="form-group"><label class="form-label">产品名称</label><input type="text" class="form-input" id="inpProductName" placeholder="如 高精度传感器Pro"></div>
+            <div class="form-group"><label class="form-label">分类</label><input type="text" class="form-input" id="inpCategory" placeholder="如 传感器"></div>
+            <div class="form-group"><label class="form-label">技术参数（JSON）</label><textarea class="form-textarea" id="inpSpecs" rows="5" placeholder='{"精度":"0.01mm","量程":"0-10MPa"}'></textarea></div>
+            <div class="form-group"><label class="form-label">内容标签（逗号分隔）</label><input type="text" class="form-input" id="inpTags" placeholder="工业传感器, 高精度, 物联网"></div>
+            <div class="flex-row mt-md">
+                <button class="btn btn-primary" onclick="saveProduct()">💾 保存</button>
+                <button class="btn" onclick="closeModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+    <script src="/js/common.js"></script>
+    <script>
+        API = '';
+        let catalogData = [];
+        let editingId = null;
+
+        async function loadCatalog() {
+            try {
+                const r = await fetch(API + '/api/skills/smart-fetch/product/catalog');
+                const d = await r.json();
+                if (d.success) {
+                    catalogData = d.data;
+                    renderTable(catalogData);
+                    document.getElementById('catalogStats').textContent = 
+                        `共 ${catalogData.length} 个产品，${catalogData.reduce((s,p)=>s+(p.contentGenerated||0),0)} 篇内容已生成`;
+                }
+            } catch (e) {
+                showToast('加载失败: ' + e.message, 'error');
+            }
+        }
+
+        function renderTable(data) {
+            if (data.length === 0) {
+                document.getElementById('catalogTable').innerHTML = '<div class="text-muted">暂无产品，点击"添加产品"开始</div>';
+                return;
+            }
+            const rows = data.map(p => `
+                <tr>
+                    <td><strong>${p.productId}</strong></td>
+                    <td>${p.name}</td>
+                    <td><span class="tag">${p.category || '-'}</span></td>
+                    <td>${Object.keys(p.specs||{}).length} 个参数</td>
+                    <td>${(p.bom||[]).length} 个物料</td>
+                    <td>${(p.competitors||[]).length} 个竞品</td>
+                    <td>${p.contentGenerated || 0} 篇</td>
+                    <td>
+                        <button class="btn btn-sm" onclick="editProduct('${p.productId}')">编辑</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.productId}')">删除</button>
+                    </td>
+                </tr>
+            `).join('');
+            document.getElementById('catalogTable').innerHTML = `
+                <table class="data-table">
+                    <thead><tr><th>产品ID</th><th>名称</th><th>分类</th><th>参数</th><th>BOM</th><th>竞品</th><th>内容</th><th>操作</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
+        }
+
+        function filterTable() {
+            const kw = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = catalogData.filter(p => 
+                p.productId.toLowerCase().includes(kw) || 
+                p.name.toLowerCase().includes(kw) ||
+                (p.category||'').toLowerCase().includes(kw)
+            );
+            renderTable(filtered);
+        }
+
+        function showAddModal() {
+            editingId = null;
+            document.getElementById('modalTitle').textContent = '添加产品';
+            document.getElementById('inpProductId').value = '';
+            document.getElementById('inpProductId').disabled = false;
+            document.getElementById('inpProductName').value = '';
+            document.getElementById('inpCategory').value = '';
+            document.getElementById('inpSpecs').value = '';
+            document.getElementById('inpTags').value = '';
+            document.getElementById('productModal').style.display = 'flex';
+        }
+
+        function editProduct(id) {
+            const p = catalogData.find(x => x.productId === id);
+            if (!p) return;
+            editingId = id;
+            document.getElementById('modalTitle').textContent = '编辑产品 - ' + p.name;
+            document.getElementById('inpProductId').value = p.productId;
+            document.getElementById('inpProductId').disabled = true;
+            document.getElementById('inpProductName').value = p.name;
+            document.getElementById('inpCategory').value = p.category || '';
+            document.getElementById('inpSpecs').value = JSON.stringify(p.specs || {}, null, 2);
+            document.getElementById('inpTags').value = (p.contentTags||[]).join(', ');
+            document.getElementById('productModal').style.display = 'flex';
+        }
+
+        async function saveProduct() {
+            const id = document.getElementById('inpProductId').value.trim();
+            const name = document.getElementById('inpProductName').value.trim();
+            const category = document.getElementById('inpCategory').value.trim();
+            const specsStr = document.getElementById('inpSpecs').value.trim();
+            const tagsStr = document.getElementById('inpTags').value.trim();
+
+            if (!id || !name) return showToast('产品ID和名称为必填项', 'error');
+
+            let specs = {};
+            try { specs = specsStr ? JSON.parse(specsStr) : {}; } catch (e) { return showToast('技术参数JSON格式错误', 'error'); }
+
+            const tags = tagsStr ? tagsStr.split(/,\s*/).filter(Boolean) : [];
+
+            try {
+                const r = await fetch(API + '/api/skills/smart-fetch/bom/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ productId: id, name, category, bomData: [], specs, contentTags: tags })
+                });
+                const d = await r.json();
+                if (d.success) {
+                    showToast('✅ 产品已保存', 'success');
+                    closeModal();
+                    loadCatalog();
+                } else {
+                    showToast('保存失败: ' + d.message, 'error');
+                }
+            } catch (e) {
+                showToast('请求失败: ' + e.message, 'error');
+            }
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm('确定删除产品 ' + id + ' 吗？')) return;
+            try {
+                const r = await fetch(API + '/smart-fetch/product/catalog/' + encodeURIComponent(id), {
+                    method: 'DELETE'
+                });
+                const d = await r.json();
+                if (d.success) {
+                    showToast('✅ ' + d.message, 'success');
+                    loadCatalog();
+                } else {
+                    showToast('删除失败: ' + d.error, 'error');
+                }
+            } catch (e) {
+                showToast('请求失败: ' + e.message, 'error');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('productModal').style.display = 'none';
+            document.getElementById('inpProductId').disabled = false;
+        }
+
+        loadCatalog();
+    </script>
+</body>
+</html>

@@ -3,9 +3,11 @@
     {
       "name": "deepseek",
       "enabled": true,
-      "baseUrl": "https://api.deepseek.com",
-      "apiKey": "sk-be1babe391c7428a80eca2b832c44cc2",
-      "models": ["deepseek-v4-flash", "deepseek-v4-pro"],
+      "baseUrl": "https://api.deepseek.com/v1/chat/completions",
+      "apiKey": "sk-61f722d4e8ed4f018c84f97563094258",
+      "models": [
+        "deepseek-chat"
+      ],
       "priority": 1,
       "note": "DeepSeek v4-flash 便宜(¥0.1/M), v4-pro 贵(¥1/M)"
     },
@@ -14,8 +16,10 @@
       "enabled": true,
       "baseUrl": "https://ark.cn-beijing.volces.com/api/coding/v3",
       "apiKey": "46bbb2c6-4ed0-4893-8b05-83179c41e83b",
-      "models": ["ark-code-latest"],
-      "priority": 2,
+      "models": [
+        "ark-code-latest"
+      ],
+      "priority": 99,
       "note": "火山方舟 Volcano Engine Ark 编程模型"
     },
     {
@@ -23,8 +27,10 @@
       "enabled": true,
       "baseUrl": "https://maas-coding-api.cn-huabei-1.xf-yun.com/v2",
       "apiKey": "MDlkZDI1YTU0ZTkyZDMyOTllOWMwMzQ5",
-      "models": ["astron-code-latest"],
-      "priority": 3,
+      "models": [
+        "astron-code-latest"
+      ],
+      "priority": 99,
       "headers": {
         "Authorization": "Bearer 0508e2d155d689743f9fef6e9fd20400:MDlkZDI1YTU0ZTkyZDMyOTllOWMwMzQ5"
       },
@@ -35,8 +41,10 @@
       "enabled": true,
       "baseUrl": "http://127.0.0.1:19000/proxy/llm",
       "apiKey": "${QCLAW_LLM_API_KEY}",
-      "models": ["anonymous/teal"],
-      "priority": 3,
+      "models": [
+        "anonymous/teal"
+      ],
+      "priority": 99,
       "note": "匿名模型 teal (通过本地代理)"
     },
     {
@@ -44,8 +52,10 @@
       "enabled": true,
       "baseUrl": "http://127.0.0.1:19000/proxy/llm",
       "apiKey": "${QCLAW_LLM_API_KEY}",
-      "models": ["anonymous/coral"],
-      "priority": 4,
+      "models": [
+        "anonymous/coral"
+      ],
+      "priority": 99,
       "note": "匿名模型 coral"
     },
     {
@@ -53,8 +63,10 @@
       "enabled": true,
       "baseUrl": "http://127.0.0.1:19000/proxy/llm",
       "apiKey": "${QCLAW_LLM_API_KEY}",
-      "models": ["anonymous/maroon"],
-      "priority": 5,
+      "models": [
+        "anonymous/maroon"
+      ],
+      "priority": 99,
       "note": "匿名模型 maroon"
     },
     {
@@ -62,13 +74,22 @@
       "enabled": true,
       "baseUrl": "http://127.0.0.1:19000/proxy/llm",
       "apiKey": "${QCLAW_LLM_API_KEY}",
-      "models": ["anonymous/lavender"],
-      "priority": 6,
+      "models": [
+        "anonymous/lavender"
+      ],
+      "priority": 99,
       "note": "匿名模型 lavendar"
     }
   ],
   "fallbackStrategy": "priority",
-  "retryOnErrors": ["balance", "insufficient", "quota", "limit", "rate", "timeout"],
+  "retryOnErrors": [
+    "balance",
+    "insufficient",
+    "quota",
+    "limit",
+    "rate",
+    "timeout"
+  ],
   "maxRetries": 3,
   "_help": {
     "说明": "AI 模型多路容错配置",

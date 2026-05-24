@@ -1,0 +1,722 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>一键发布 - WorkBuddy</title>
+  <link rel="stylesheet" href="/css/common.css">
+  <style>
+    .section-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+    .section-tab { padding: 10px 20px; cursor: pointer; font-size: 14px; color: var(--text2); border-bottom: 2px solid transparent; transition: all .2s; }
+    .section-tab:hover { color: var(--text); }
+    .section-tab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block !important; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-logo"><h1>🚀 WorkBuddy</h1><p>内容数字员工平台 v6.0</p></div>
+      <nav class="sidebar-nav" id="mainNav"></nav>
+      <div class="sidebar-footer"><div class="status"><span class="dot"></span><span id="serverStatus">服务运行中</span></div></div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <h2>📤 一键发布</h2>
+        <div class="topbar-actions">
+          <button class="btn btn-outline" onclick="healthCheck()">健康检查</button>
+        </div>
+      </header>
+
+      <div class="content">
+
+        <!-- Tab 导航 -->
+        <div class="section-tabs">
+          <div class="section-tab active" data-tab="pub-auto" onclick="switchTab('pub-auto')">AI自动生成</div>
+          <div class="section-tab" data-tab="pub-single" onclick="switchTab('pub-single')">单篇发布</div>
+          <div class="section-tab" data-tab="pub-batch" onclick="switchTab('pub-batch')">批量推送</div>
+          <div class="section-tab" data-tab="pub-assets" onclick="switchTab('pub-assets')">素材生成</div>
+          <div class="section-tab" data-tab="pub-history" onclick="switchTab('pub-history')">发布记录</div>
+        </div>
+
+        <!-- ═══ AI自动生成 ═══ -->
+        <div class="tab-pane active" id="tab-pub-auto">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">AI自动生成并发布</span>
+              <span class="tag tag-accent">enhanced-engine.js</span>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">AI模型</label>
+                <select class="form-select" id="autoModel"></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">写作风格</label>
+                <select class="form-select" id="autoStyle">
+                  <option value="kazik">卡兹克风格（推荐）</option>
+                  <option value="professional">专业深度</option>
+                  <option value="story">轻松故事</option>
+                  <option value="technical">硬核技术</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">字数范围</label>
+                <select class="form-select" id="autoWords">
+                  <option value="2000">2000字（快速）</option>
+                  <option value="4000" selected>4000字（推荐）</option>
+                  <option value="6000">6000字（深度）</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">话题关键词（可选，留空自动从话题库选择）</label>
+              <input class="form-input" id="autoKeywords" placeholder="例如：人形机器人, AI, 大模型">
+            </div>
+            <div class="form-group">
+              <label class="form-label">发布平台</label>
+              <div style="display:flex;gap:16px;">
+                <label><input type="checkbox" id="pubToWechat" checked> 微信公众号草稿箱</label>
+                <label><input type="checkbox" id="pubToCMS" checked> CMS数据库</label>
+              </div>
+            </div>
+            <div style="margin-top:16px;display:flex;gap:8px;">
+              <button class="btn btn-primary" onclick="runAutoGenerate()">✨ AI生成并发布</button>
+              <button class="btn btn-outline" onclick="previewTopics()">📋 查看话题库</button>
+            </div>
+            <div id="autoGenerateLog" class="log-area" style="display:none;margin-top:16px;padding:12px;background:var(--bg);border-radius:6px;font-size:13px;color:var(--text2);max-height:400px;overflow-y:auto;"></div>
+          </div>
+        </div>
+
+        <!-- ═══ 单篇发布 ═══ -->
+        <div class="tab-pane" id="tab-pub-single">
+          <div class="card">
+            <div class="form-group" style="margin-bottom:12px;">
+              <label class="form-label">📰 文章标题</label>
+              <input class="form-input" id="pubTitle" placeholder="输入文章标题">
+            </div>
+            <div class="form-row" style="margin-bottom:12px;">
+              <div class="form-group">
+                <label class="form-label">📂 目标栏目</label>
+                <select class="form-select" id="pubCategory"></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">🏷️ 来源</label>
+                <input class="form-input" id="pubSource" value="ContentAI-手动发布">
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:12px;">
+              <label class="form-label">📄 文章内容 (支持 Markdown)</label>
+              <textarea class="form-input" id="pubContent" rows="15" placeholder="输入文章内容 (Markdown格式)..."></textarea>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn-primary" onclick="publishToCMSOnly()">📤 推送到CMS</button>
+              <button class="btn btn-outline" onclick="previewContent()">👁️ 预览排版</button>
+              <button class="btn btn-outline" onclick="autoMatchCategory()">🔍 智能匹配栏目</button>
+            </div>
+            <div id="publishResult" style="display:none;margin-top:12px;padding:12px;background:var(--bg);border-radius:6px;font-size:13px;"></div>
+          </div>
+        </div>
+
+        <!-- ═══ 批量推送 ═══ -->
+        <div class="tab-pane" id="tab-pub-batch">
+          <div class="card">
+            <div class="card-header"><span class="card-title">批量推送</span></div>
+            <p style="font-size:13px;color:var(--text2);margin-bottom:8px;">每行一篇文章,格式: 标题 | 栏目ID(可选)</p>
+            <textarea class="form-input" id="batchInput" rows="10" placeholder="文章标题1 | 121&#10;文章标题2 | 131&#10;文章标题3"></textarea>
+            <div style="margin-top:12px;">
+              <button class="btn btn-primary" onclick="batchPublish()">📤 批量推送</button>
+            </div>
+            <div id="batchResult" style="display:none;margin-top:12px;padding:12px;background:var(--bg);border-radius:6px;font-size:13px;"></div>
+          </div>
+        </div>
+
+        <!-- ═══ 素材生成 ═══ -->
+        <div class="tab-pane" id="tab-pub-assets">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:20px;">
+            <div class="card clickable" style="cursor:pointer;text-align:center;padding:24px;" onclick="openAssetPanel('cover')">
+              <div style="font-size:36px;">🖼️</div>
+              <div style="font-weight:600;margin:8px 0 4px;">封面图生成</div>
+              <div style="font-size:12px;color:var(--text2);">5维参数，77种风格组合</div>
+            </div>
+            <div class="card clickable" style="cursor:pointer;text-align:center;padding:24px;" onclick="openAssetPanel('xhs')">
+              <div style="font-size:36px;">📕</div>
+              <div style="font-weight:600;margin:8px 0 4px;">小红书卡片图</div>
+              <div style="font-size:12px;color:var(--text2);">小红书风格卡片生成</div>
+            </div>
+            <div class="card clickable" style="cursor:pointer;text-align:center;padding:24px;" onclick="openAssetPanel('slide')">
+              <div style="font-size:36px;">📊</div>
+              <div style="font-weight:600;margin:8px 0 4px;">PPT幻灯片</div>
+              <div style="font-size:12px;color:var(--text2);">演示文稿自动生成</div>
+            </div>
+          </div>
+
+          <!-- 封面图面板 -->
+          <div class="card" id="assetPanel-cover" style="display:none;">
+            <div class="card-header">
+              <span class="card-title">🖼️ 封面图生成</span>
+              <button class="btn btn-sm btn-outline" onclick="closeAssetPanel('cover')" style="float:right;">关闭</button>
+            </div>
+            <div class="form-row" style="margin-bottom:12px;">
+              <div class="form-group"><label class="form-label">标题</label><input class="form-input" id="coverTitle" placeholder="文章标题"></div>
+              <div class="form-group"><label class="form-label">副标题</label><input class="form-input" id="coverSubtitle" placeholder="副标题(可选)"></div>
+            </div>
+            <div class="form-row" style="margin-bottom:12px;">
+              <div class="form-group"><label class="form-label">类型</label><select class="form-select" id="coverType"><option>文章封面</option><option>活动海报</option><option>产品宣传</option></select></div>
+              <div class="form-group"><label class="form-label">配色</label><select class="form-select" id="coverPalette"><option>科技蓝</option><option>商务灰</option><option>活力橙</option><option>清新绿</option><option>高级黑</option></select></div>
+            </div>
+            <button class="btn btn-primary" onclick="generateCoverImage()">生成封面图</button>
+            <div id="coverResult" style="display:none;margin-top:12px;"></div>
+          </div>
+
+          <!-- 小红书面板 -->
+          <div class="card" id="assetPanel-xhs" style="display:none;">
+            <div class="card-header">
+              <span class="card-title">📕 小红书卡片图</span>
+              <button class="btn btn-sm btn-outline" onclick="closeAssetPanel('xhs')" style="float:right;">关闭</button>
+            </div>
+            <div class="form-group" style="margin-bottom:12px;"><label class="form-label">内容</label><textarea class="form-input" id="xhsContent" rows="6" placeholder="输入小红书内容..."></textarea></div>
+            <div class="form-row" style="margin-bottom:12px;">
+              <div class="form-group"><label class="form-label">风格</label><select class="form-select" id="xhsStyle"><option>简约</option><option>文艺</option><option>可爱</option><option>专业</option></select></div>
+              <div class="form-group"><label class="form-label">布局</label><select class="form-select" id="xhsLayout"><option>竖版</option><option>横版</option><option>方版</option></select></div>
+            </div>
+            <button class="btn btn-primary" onclick="generateXHSCards()">生成小红书卡片</button>
+            <div id="xhsResult" style="display:none;margin-top:12px;"></div>
+          </div>
+
+          <!-- PPT面板 -->
+          <div class="card" id="assetPanel-slide" style="display:none;">
+            <div class="card-header">
+              <span class="card-title">📊 PPT幻灯片</span>
+              <button class="btn btn-sm btn-outline" onclick="closeAssetPanel('slide')" style="float:right;">关闭</button>
+            </div>
+            <div class="form-group" style="margin-bottom:12px;"><label class="form-label">内容大纲</label><textarea class="form-input" id="slideContent" rows="6" placeholder="输入PPT内容大纲..."></textarea></div>
+            <div class="form-row" style="margin-bottom:12px;">
+              <div class="form-group"><label class="form-label">风格</label><select class="form-select" id="slideStyle"><option>商务</option><option>简约</option><option>创意</option><option>学术</option></select></div>
+              <div class="form-group"><label class="form-label">页数</label><input type="number" class="form-input" id="slidePages" value="10" min="3" max="50"></div>
+            </div>
+            <button class="btn btn-primary" onclick="generateSlideDeck()">生成PPT</button>
+            <div id="slideResult" style="display:none;margin-top:12px;"></div>
+          </div>
+        </div>
+
+        <!-- ═══ 发布记录 ═══ -->
+        <div class="tab-pane" id="tab-pub-history">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">发布记录</span>
+              <button class="btn btn-sm btn-outline" onclick="loadPublishHistory()">刷新</button>
+            </div>
+            <table class="data-table" id="publishHistoryTable">
+              <thead><tr><th>时间</th><th>标题</th><th>平台</th><th>状态</th></tr></thead>
+              <tbody id="publishHistoryBody"><tr><td colspan="4" style="text-align:center;color:var(--text2);padding:16px;">点击"刷新"加载记录</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div><!-- /content -->
+    </div><!-- /main -->
+  </div><!-- /app -->
+
+  <div id="toast" class="toast"></div>
+  <script src="/js/common.js"></script>
+  <script>
+    var API = '';
+    // ── Tab 切换 ─────────────────────────────────
+    function switchTab(name) {
+      document.querySelectorAll('.section-tab').forEach(function(b) { b.classList.toggle('active', b.dataset.tab === name); });
+      document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.toggle('active', p.id === 'tab-' + name); });
+    }
+
+    // ── Toast ────────────────────────────────────
+    function showToast(msg, type) {
+      type = type || 'success';
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast ' + type;
+      setTimeout(function() { t.classList.add('show'); }, 10);
+      setTimeout(function() { t.classList.remove('show'); }, 3500);
+    }
+
+    // ── 健康检查 ─────────────────────────────────
+    async function healthCheck() {
+      try {
+        var r = await fetch('/api/health');
+        var d = await r.json();
+        document.getElementById('serverStatus').textContent = '运行中 (' + Math.round(d.uptime) + 's)';
+        showToast('✅ 服务正常', 'success');
+      } catch (e) {
+        document.getElementById('serverStatus').textContent = '离线';
+        showToast('❌ 服务未启动', 'error');
+      }
+    }
+
+    // ── 日志输出 ─────────────────────────────────
+    function logAuto(msg) {
+      var el = document.getElementById('autoGenerateLog');
+      el.style.display = 'block';
+      var div = document.createElement('div');
+      div.textContent = new Date().toLocaleTimeString() + ' - ' + msg;
+      el.appendChild(div);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    // ════════════════════════════════════════════
+    //  AI 自动生成并发布
+    // ════════════════════════════════════════════
+
+    async function runAutoGenerate() {
+      var model = document.getElementById('autoModel').value;
+      var style = document.getElementById('autoStyle').value;
+      var words = document.getElementById('autoWords').value;
+      var keywords = document.getElementById('autoKeywords').value.trim();
+      var toWechat = document.getElementById('pubToWechat').checked;
+      var toCMS = document.getElementById('pubToCMS').checked;
+
+      if (!keywords) return showToast('请输入话题关键词', 'error');
+
+      logAuto('🚀 提交AI生成任务...');
+      try {
+        var r = await fetch(API + '/api/publish/auto-generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: model, style: style, words: words, keywords: keywords, toWechat: toWechat, toCMS: toCMS })
+        });
+        var d = await r.json();
+        console.log('[publish] auto-generate response:', d);
+
+        if (d.success && d.taskId) {
+          logAuto('⏳ 任务已创建: ' + d.taskId);
+          pollTask(d.taskId);
+        } else {
+          logAuto('❌ 提交失败: ' + (d.message || JSON.stringify(d)));
+        }
+      } catch (e) {
+        logAuto('❌ 请求失败: ' + e.message);
+      }
+    }
+
+    async function pollTask(taskId) {
+      try {
+        var r = await fetch(API + '/api/publish/auto-generate/' + taskId);
+        var d = await r.json();
+        console.log('[publish] poll task:', d);
+
+        if (d.status === 'running' || d.status === 'pending') {
+          var elapsed = Math.round((Date.now() - d.startTime) / 1000);
+          logAuto('⏳ AI正在生成文章... (' + elapsed + 's)');
+          setTimeout(function() { pollTask(taskId); }, 5000);
+        } else if (d.status === 'completed') {
+          var res = d.result || {};
+          var logEl = document.getElementById('autoGenerateLog');
+          logEl.innerHTML = ''
+            + '<div style="color:var(--success);font-weight:600;margin-bottom:8px;">✅ 生成' + (res.published ? '并发布' : '') + '成功！</div>'
+            + '<div>📝 标题: ' + (res.title || '-') + '</div>'
+            + '<div>📊 字数: ' + (res.wordCount || 0) + '</div>'
+            + '<div>🏷️ 分类: ' + (res.category || '-') + '</div>'
+            + (res.mediaId ? '<div>📄 MediaID: ' + res.mediaId + '</div>' : '')
+            + '<div>⏱️ 耗时: ' + Math.round((res.elapsedMs||0)/1000) + 's</div>'
+            + (res.articleId ? '<div>🔗 文章ID: ' + res.articleId + '</div>' : '')
+            + '<div style="margin-top:8px;"><a href="https://mp.weixin.qq.com" target="_blank" style="color:var(--accent);">🔗 微信后台查看</a></div>';
+          showToast('✅ AI生成成功！');
+        } else {
+          logAuto('❌ 生成失败: ' + (d.error || d.message || '未知错误'));
+        }
+      } catch (e) {
+        logAuto('❌ 轮询失败: ' + e.message);
+      }
+    }
+
+    async function previewTopics() {
+      try {
+        var r = await fetch(API + '/api/publish/topics');
+        var d = await r.json();
+        console.log('[publish] topics:', d);
+
+        if (d.success && d.data) {
+          var topicList = Array.isArray(d.data) ? d.data : [];
+          var logEl = document.getElementById('autoGenerateLog');
+          logEl.style.display = 'block';
+          var html = '<div style="font-weight:600;margin-bottom:8px;">📋 话题库（前20条）</div>';
+          topicList.slice(0, 20).forEach(function(t, i) {
+            var topic = typeof t === 'string' ? t : (t.topic || t.keyword || '');
+            var cat = t.category || '';
+            html += '<div style="padding:4px 0;border-bottom:1px solid var(--border);">' + (i+1) + '. ' + topic + (cat ? ' <span style="color:var(--text2);">(' + cat + ')</span>' : '') + '</div>';
+          });
+          html += '<div style="margin-top:8px;color:var(--text2);">共 ' + topicList.length + ' 条话题</div>';
+          logEl.innerHTML = html;
+        } else {
+          showToast(d.message || '加载话题库失败', 'error');
+        }
+      } catch (e) {
+        showToast('请求失败: ' + e.message, 'error');
+      }
+    }
+
+    // ════════════════════════════════════════════
+    //  单篇发布
+    // ════════════════════════════════════════════
+
+    async function publishToCMSOnly() {
+      var title = document.getElementById('pubTitle').value.trim();
+      var content = document.getElementById('pubContent').value.trim();
+      var categoryId = document.getElementById('pubCategory').value;
+      var source = document.getElementById('pubSource').value.trim();
+
+      if (!title) return showToast('请填写标题', 'error');
+      if (!content) return showToast('请填写内容', 'error');
+
+      var resultDiv = document.getElementById('publishResult');
+      resultDiv.style.display = 'block';
+      resultDiv.textContent = '⏳ 正在推送到CMS...';
+
+      try {
+        var r = await fetch(API + '/api/publish/cms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: title,
+            content: content,
+            categoryId: categoryId ? parseInt(categoryId) : null,
+            source: source || 'WorkBuddy',
+            toWechat: false
+          })
+        });
+        var d = await r.json();
+        console.log('[publish] cms result:', d);
+
+        if (d.success) {
+          var msg = d.message || '发布成功';
+          if (d.data && d.data.cms) msg += ' (ID:' + d.data.cms.articleId + ')';
+          resultDiv.innerHTML = '<span style="color:var(--success);">✅ ' + msg + '</span>';
+          showToast('✅ 发布成功！');
+        } else {
+          resultDiv.innerHTML = '<span style="color:var(--danger);">❌ ' + (d.message || '发布失败') + '</span>';
+          showToast(d.message || '发布失败', 'error');
+        }
+      } catch (e) {
+        resultDiv.innerHTML = '<span style="color:var(--danger);">❌ ' + e.message + '</span>';
+        showToast('发布失败: ' + e.message, 'error');
+      }
+    }
+
+    async function autoMatchCategory() {
+      var title = document.getElementById('pubTitle').value.trim();
+      var content = document.getElementById('pubContent').value.trim();
+      if (!title && !content) return showToast('请先输入标题或内容', 'error');
+
+      try {
+        var r = await fetch(API + '/api/cms/match-category', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: title, content: content })
+        });
+        var d = await r.json();
+        if (d.success && d.data) {
+          document.getElementById('pubCategory').value = String(d.data.id);
+          showToast('🎯 匹配到: ' + d.data.name + ' (ID:' + d.data.id + ')');
+        } else {
+          showToast(d.message || '未匹配到栏目', 'error');
+        }
+      } catch (e) {
+        showToast('匹配失败: ' + e.message, 'error');
+      }
+    }
+
+    async function previewContent() {
+      var title = document.getElementById('pubTitle').value.trim();
+      var content = document.getElementById('pubContent').value.trim();
+      if (!content) return showToast('请先输入内容', 'error');
+
+      try {
+        var r = await fetch(API + '/api/publish/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: title, content: content })
+        });
+        var d = await r.json();
+        if (d.html) {
+          var w = window.open('', '_blank');
+          w.document.write('<html><head><title>预览 - ' + (title||'文章') + '</title><style>body{font-family:-apple-system,sans-serif;max-width:800px;margin:40px auto;padding:20px;line-height:1.8;}img{max-width:100%;}</style></head><body>' + d.html + '</body></html>');
+          w.document.close();
+        } else {
+          showToast('预览完成', 'success');
+        }
+      } catch (e) {
+        showToast('预览失败: ' + e.message, 'error');
+      }
+    }
+
+    // ════════════════════════════════════════════
+    //  批量推送
+    // ════════════════════════════════════════════
+
+    async function batchPublish() {
+      var input = document.getElementById('batchInput').value.trim();
+      if (!input) return showToast('请输入批量内容', 'error');
+
+      var lines = input.split('\n').filter(function(l) { return l.trim(); });
+      var articles = lines.map(function(l) {
+        var parts = l.split('|');
+        return {
+          title: (parts[0] || '').trim(),
+          categoryId: parts[1] ? parseInt(parts[1].trim()) : undefined
+        };
+      }).filter(function(a) { return a.title; });
+
+      if (!articles.length) return showToast('没有有效的文章条目', 'error');
+
+      var resultDiv = document.getElementById('batchResult');
+      resultDiv.style.display = 'block';
+      resultDiv.textContent = '⏳ 正在批量推送 ' + articles.length + ' 篇文章...';
+
+      try {
+        // 后端期望 { articles: [...] } 格式
+        var r = await fetch(API + '/api/publish/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ articles: articles })
+        });
+        var d = await r.json();
+        console.log('[publish] batch result:', d);
+
+        if (d.success) {
+          var info = d.data || {};
+          resultDiv.innerHTML = '<span style="color:var(--success);">✅ 完成: '
+            + (info.success || 0) + '/' + (info.total || articles.length)
+            + ' 成功, ' + (info.failed || 0) + ' 失败</span>';
+          showToast('✅ 批量推送完成');
+        } else {
+          resultDiv.innerHTML = '<span style="color:var(--danger);">❌ ' + (d.message || '批量推送失败') + '</span>';
+          showToast(d.message || '批量推送失败', 'error');
+        }
+      } catch (e) {
+        resultDiv.innerHTML = '<span style="color:var(--danger);">❌ ' + e.message + '</span>';
+        showToast('批量推送失败: ' + e.message, 'error');
+      }
+    }
+
+    // ════════════════════════════════════════════
+    //  素材生成
+    // ════════════════════════════════════════════
+
+    function openAssetPanel(type) {
+      ['cover','xhs','slide'].forEach(function(t) {
+        var el = document.getElementById('assetPanel-' + t);
+        if (el) el.style.display = t === type ? '' : 'none';
+      });
+    }
+    function closeAssetPanel(type) {
+      var el = document.getElementById('assetPanel-' + type);
+      if (el) el.style.display = 'none';
+    }
+
+    async function generateCoverImage() {
+      var title = document.getElementById('coverTitle').value || document.getElementById('pubTitle')?.value || 'Cover';
+      var subtitle = document.getElementById('coverSubtitle').value;
+      var type = document.getElementById('coverType').value;
+      var palette = document.getElementById('coverPalette').value;
+      var resultEl = document.getElementById('coverResult');
+      resultEl.style.display = 'block';
+      resultEl.textContent = '⏳ 正在生成封面图...';
+
+      try {
+        var r = await fetch(API + '/api/asset/cover', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: title, subtitle: subtitle, type: type, palette: palette })
+        });
+        var d = await r.json();
+        if (d.url) {
+          resultEl.innerHTML = '<img src="' + d.url + '" style="max-width:100%;border-radius:6px;" alt="封面图"><br><a href="' + d.url + '" target="_blank">下载图片</a>';
+          showToast('✅ 封面图已生成');
+        } else {
+          resultEl.innerHTML = '<span style="color:var(--danger);">❌ ' + (d.message || '生成失败') + '</span>';
+          showToast(d.message || '生成失败', 'error');
+        }
+      } catch (e) {
+        resultEl.innerHTML = '<span style="color:var(--danger);">❌ ' + e.message + '</span>';
+        showToast('生成失败: ' + e.message, 'error');
+      }
+    }
+
+    async function generateXHSCards() {
+      var content = document.getElementById('xhsContent').value.trim();
+      if (!content) return showToast('请输入内容', 'error');
+      var resultEl = document.getElementById('xhsResult');
+      resultEl.style.display = 'block';
+      resultEl.textContent = '⏳ 正在生成小红书卡片...';
+
+      try {
+        var r = await fetch(API + '/api/asset/xhs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: content, style: document.getElementById('xhsStyle').value, layout: document.getElementById('xhsLayout').value })
+        });
+        var d = await r.json();
+        if (d.url) {
+          resultEl.innerHTML = '<img src="' + d.url + '" style="max-width:100%;border-radius:6px;" alt="小红书卡片">';
+          showToast('✅ 小红书卡片已生成');
+        } else {
+          resultEl.innerHTML = '<span style="color:var(--danger);">❌ ' + (d.message || '生成失败') + '</span>';
+        }
+      } catch (e) {
+        resultEl.innerHTML = '<span style="color:var(--danger);">❌ ' + e.message + '</span>';
+        showToast('生成失败: ' + e.message, 'error');
+      }
+    }
+
+    async function generateSlideDeck() {
+      var content = document.getElementById('slideContent').value.trim();
+      if (!content) return showToast('请输入内容', 'error');
+      var resultEl = document.getElementById('slideResult');
+      resultEl.style.display = 'block';
+      resultEl.textContent = '⏳ 正在生成PPT...';
+
+      try {
+        var r = await fetch(API + '/api/asset/slide', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: content, style: document.getElementById('slideStyle').value, pages: parseInt(document.getElementById('slidePages').value) })
+        });
+        var d = await r.json();
+        if (d.url) {
+          resultEl.innerHTML = '<a href="' + d.url + '" target="_blank" class="btn btn-primary">📥 下载 PPT</a>';
+          showToast('✅ PPT已生成');
+        } else {
+          resultEl.innerHTML = '<span style="color:var(--danger);">❌ ' + (d.message || '生成失败') + '</span>';
+        }
+      } catch (e) {
+        resultEl.innerHTML = '<span style="color:var(--danger);">❌ ' + e.message + '</span>';
+        showToast('生成失败: ' + e.message, 'error');
+      }
+    }
+
+    // ════════════════════════════════════════════
+    //  发布记录
+    // ════════════════════════════════════════════
+
+    async function loadPublishHistory() {
+      var tbody = document.getElementById('publishHistoryBody');
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:16px;">加载中...</td></tr>';
+
+      try {
+        var r = await fetch(API + '/api/cms/articles?page=1&pageSize=20');
+        var d = await r.json();
+
+        if (d.success && Array.isArray(d.data)) {
+          if (!d.data.length) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:16px;">暂无发布记录</td></tr>';
+            return;
+          }
+          tbody.innerHTML = d.data.map(function(a) {
+            return '<tr>'
+              + '<td style="font-size:12px;color:var(--text2);">' + (a.addtime || '-') + '</td>'
+              + '<td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;" title="' + (a.title||'') + '">' + (a.title||'-') + '</td>'
+              + '<td>CMS</td>'
+              + '<td><span class="badge badge-success">已发布</span></td>'
+              + '</tr>';
+          }).join('');
+        } else {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--danger);">加载失败</td></tr>';
+        }
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--danger);">' + e.message + '</td></tr>';
+      }
+    }
+
+    // ════════════════════════════════════════════
+    //  页面初始化 - 加载下拉数据
+    // ════════════════════════════════════════════
+
+    document.addEventListener('DOMContentLoaded', async function() {
+      console.log('[publish] Page loading...');
+
+      // 1. 从 localStorage 读取其他页面传递的内容
+      var savedTitle = localStorage.getItem('publishTitle');
+      var savedContent = localStorage.getItem('publishContent');
+      if (savedTitle) {
+        document.getElementById('pubTitle').value = savedTitle;
+        localStorage.removeItem('publishTitle');
+      }
+      if (savedContent) {
+        document.getElementById('pubContent').value = savedContent;
+        localStorage.removeItem('publishContent');
+        if (savedTitle) showToast('已加载从生成页面传递的内容', 'success');
+      }
+
+      // 2. 加载模型列表 → 填充 #autoModel 下拉框
+      try {
+        var modelsRes = await fetch(API + '/api/models/list');
+        var md = await modelsRes.json();
+        console.log('[publish] models API response:', md);
+
+        // 后端返回对象格式: { _selected:"xxx", deepseek:{name,...}, volcengine:{name,...} }
+        var rawData = md.data;
+        var modelList = [];
+        if (Array.isArray(rawData)) {
+          modelList = rawData;
+        } else if (rawData && typeof rawData === 'object') {
+          modelList = Object.entries(rawData)
+            .filter(function(k) { return k[0] !== '_selected'; })
+            .map(function(e) { var o = { id: e[0] }; Object.keys(e[1]).forEach(function(k) { o[k] = e[1][k]; }); return o; });
+        }
+
+        var selectedModel = (md.data && md.data._selected) || null;
+
+        if (modelList.length) {
+          var selectEl = document.getElementById('autoModel');
+          selectEl.innerHTML = '';
+          modelList.forEach(function(m) {
+            var opt = document.createElement('option');
+            opt.value = m.id;
+            opt.textContent = m.name + (m.description ? ' - ' + m.description : '');
+            if (m.id === selectedModel || m.selected) opt.selected = true;
+            selectEl.appendChild(opt);
+          });
+          console.log('[publish] Loaded', modelList.length, 'models, selected:', selectedModel);
+        }
+      } catch (e) {
+        console.error('[publish] Failed to load models:', e);
+      }
+
+      // 3. 加载栏目列表 → 填充 #pubCategory 下拉框
+      try {
+        var catsRes = await fetch(API + '/api/cms/categories');
+        var cd = await catsRes.json();
+        console.log('[publish] categories API response:', cd);
+
+        var catData = cd.data || {};
+        var catKeys = Object.keys(catData).filter(function(k) { return k !== '_selected'; });
+
+        if (catKeys.length) {
+          var catSelect = document.getElementById('pubCategory');
+          catSelect.innerHTML = '<option value="">自动匹配</option>';
+          catKeys.forEach(function(id) {
+            var c = catData[id];
+            var opt = document.createElement('option');
+            opt.value = id;
+            opt.textContent = c.name || id;
+            catSelect.appendChild(opt);
+          });
+
+          // 检查是否有保存的栏目
+          var savedCat = localStorage.getItem('publishCategory');
+          if (savedCat) {
+            catSelect.value = savedCat;
+            localStorage.removeItem('publishCategory');
+          }
+          console.log('[publish] Loaded', catKeys.length, 'categories');
+        }
+      } catch (e) {
+        console.error('[publish] Failed to load categories:', e);
+      }
+
+      // 4. 健康检查
+      healthCheck();
+    });
+  </script>
+</body>
+</html>
