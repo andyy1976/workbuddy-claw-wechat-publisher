@@ -85,7 +85,7 @@ router.post('/generate', async (req, res) => {
     }
 });
 
-// ── 去AI味优化 ──────────────────────────────────
+// ── 去AI味优化（方法论增强版）──────────────────────────────
 router.post('/deaiify', async (req, res) => {
     try {
         const { content, intensity } = req.body;
@@ -94,17 +94,19 @@ router.post('/deaiify', async (req, res) => {
             return res.status(400).json({ success: false, message: '缺少内容(content)' });
         }
         
-        const optimized = await llm.deAIify(content, intensity || 'medium');
+        // ✅ llm.deAIify() 现在返回 { optimized, methodologyCheck }
+        const result = await llm.deAIify(content, intensity || 'medium');
         
         res.json({
             success: true,
             data: {
                 original: content,
-                optimized,
+                optimized: result.optimized,
+                methodologyCheck: result.methodologyCheck,
                 intensity: intensity || 'medium',
                 reduction: {
                     originalLength: content.length,
-                    optimizedLength: optimized.length
+                    optimizedLength: result.optimized.length
                 }
             }
         });

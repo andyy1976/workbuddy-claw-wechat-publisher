@@ -116,7 +116,18 @@
               <button class="btn btn-outline" onclick="previewContent()">👁️ 预览排版</button>
               <button class="btn btn-outline" onclick="autoMatchCategory()">🔍 智能匹配栏目</button>
             </div>
-            <div id="publishResult" style="display:none;margin-top:12px;padding:12px;background:var(--bg);border-radius:6px;font-size:13px;"></div>
+            
+            <div id="pubPreview" style="display:none; margin-top:12px; padding:16px; background:white; border:1px solid var(--border); border-radius:6px; max-height:500px; overflow-y:auto;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <strong style="font-size:14px;">📖 内容预览</strong>
+                <button class="btn btn-sm" onclick="togglePreview()">收起</button>
+              </div>
+              <div id="pubPreviewContent" style="line-height:1.8;"></div>
+            </div>
+            <div style="margin-top:8px; display:flex; gap:8px;">
+              <button class="btn btn-sm btn-outline" onclick="togglePreview()">👁️ 预览/收起</button>
+            </div>
+<div id="publishResult" style="display:none;margin-top:12px;padding:12px;background:var(--bg);border-radius:6px;font-size:13px;"></div>
           </div>
         </div>
 
@@ -221,7 +232,39 @@
   </div><!-- /app -->
 
   <div id="toast" class="toast"></div>
-  <script src="/js/common.js"></script>
+  <script src="/js/common.js">
+    function togglePreview() {
+      const preview = document.getElementById('pubPreview');
+      const content = document.getElementById('pubContent').value;
+      if (!content) return showToast('没有可预览的内容', 'error');
+      
+      if (preview.style.display === 'none') {
+        // 显示预览
+        document.getElementById('pubPreviewContent').innerHTML = content
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/\n\n/g, '<br><br>')
+          .replace(/\n/g, '<br>');
+        preview.style.display = 'block';
+      } else {
+        preview.style.display = 'none';
+      }
+    }
+    
+    // 预览切换
+    function togglePreview() {
+      const preview = document.getElementById('pubPreview');
+      const btn = event.target;
+      if (preview.style.display === 'none') {
+        preview.style.display = 'block';
+        btn.textContent = '收起';
+      } else {
+        preview.style.display = 'none';
+        btn.textContent = '👁️ 预览/收起';
+      }
+    }
+  </script>
   <script>
     var API = '';
     // ── Tab 切换 ─────────────────────────────────
@@ -389,8 +432,20 @@
 
         if (d.success) {
           var msg = d.message || '发布成功';
+          var checkInfo = '';
+
+          // ── 显示方法论检查结果 ─────────────────────────────────────
+          if (d.data && d.data.methodologyCheck) {
+            var check = d.data.methodologyCheck;
+            if (!check.passed) {
+              checkInfo = '<div style="margin-top:8px;color:var(--danger);">⚠️ 方法论检查未通过: ' + check.errors.join(', ') + '</div>';
+            } else {
+              checkInfo = '<div style="margin-top:8px;color:var(--success);">✅ 方法论检查通过</div>';
+            }
+          }
+
           if (d.data && d.data.cms) msg += ' (ID:' + d.data.cms.articleId + ')';
-          resultDiv.innerHTML = '<span style="color:var(--success);">✅ ' + msg + '</span>';
+          resultDiv.innerHTML = '<span style="color:var(--success);">✅ ' + msg + '</span>' + checkInfo;
           showToast('✅ 发布成功！');
         } else {
           resultDiv.innerHTML = '<span style="color:var(--danger);">❌ ' + (d.message || '发布失败') + '</span>';
@@ -642,10 +697,23 @@
         localStorage.removeItem('publishTitle');
       }
       if (savedContent) {
-        document.getElementById('pubContent').value = savedContent;
-        localStorage.removeItem('publishContent');
-        if (savedTitle) showToast('已加载从生成页面传递的内容', 'success');
-      }
+          document.getElementById('pubContent').value = savedContent;
+          localStorage.removeItem('publishContent');
+          switchTab('pub-single');
+          try { sessionStorage.setItem('lastPubContent', savedContent); if (savedTitle) sessionStorage.setItem('lastPubTitle', savedTitle); } catch(e) {}
+          if (savedTitle) showToast('已加载从生成页面传递的内容', 'success');
+        } else {
+          var lastContent = null;
+          try { lastContent = sessionStorage.getItem('lastPubContent'); } catch(e) {}
+          if (lastContent) {
+            document.getElementById('pubContent').value = lastContent;
+            var lastTitle = null;
+            try { lastTitle = sessionStorage.getItem('lastPubTitle'); } catch(e) {}
+            if (lastTitle) document.getElementById('pubTitle').value = lastTitle;
+            switchTab('pub-single');
+            showToast('已恢复上次的草稿内容', 'success');
+          }
+        }
 
       // 2. 加载模型列表 → 填充 #autoModel 下拉框
       try {

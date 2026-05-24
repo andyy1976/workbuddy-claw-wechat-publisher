@@ -1,5 +1,5 @@
 /**
- * 发布路由（修复 thumbMediaId 问题 v5）
+ * 发布路由（多平台发布 + 推送状态记录 v7.0）
  */
 
 const express = require('express');
@@ -7,6 +7,9 @@ const router = express.Router();
 const cms = require('../services/cms');
 const path = require('path');
 const fs = require('fs');
+const { prePublishCheck } = require('../services/pre-publish-check');
+const mysql = require('mysql2/promise');
+const { marked } = require('marked');
 
 // 直接加载 wechat-publisher-plugin 的 MultiPlatformPublisher 类
 let MultiPlatformPublisher = null;
@@ -33,6 +36,84 @@ try {
     console.error('   堆栈:', e.stack);
 }
 
+// ── 初始化推送日志表 ─────────────────────────────
+async function initPublishLogTable() {
+  try {
+    const conn = await mysql.createConnection({
+      host: process.env.DB_HOST || '82.156.40.94',
+      user: process.env.DB_USER || 'eastaiai',
+      password: process.env.DB_PASSWORD || 'alibaba',
+      database: process.env.DB_NAME || 'eastaiai',
+      charset: 'utf8mb4',
+      connectTimeout: 15000
+    });
+    
+    console.log('[DB] 检查 content_publish_log 表...');
+    
+    // 创建表（如果不存在）
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS content_publish_log (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        content_id INT NOT NULL COMMENT 'CMS文章ID',
+        platform VARCHAR(50) NOT NULL COMMENT '平台: wechat/cms/xiaohongshu/notepad',
+        status ENUM('pending', 'success', 'failed', 'retry') NOT NULL DEFAULT 'pending',
+        error_msg TEXT COMMENT '失败原因',
+        wechat_media_id VARCHAR(255) COMMENT '微信返回的media_id',
+        wechat_draft_id VARCHAR(255) COMMENT '微信草稿箱ID',
+        published_at DATETIME COMMENT '成功发布时间',
+        retry_count INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_content (content_id),
+        INDEX idx_status (status),
+        INDEX idx_platform (platform),
+        UNIQUE KEY uk_content_platform (content_id, platform)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='内容推送状态记录表'
+    `);
+    
+    console.log('✅ [DB] content_publish_log 表已就绪');
+    await conn.end();
+    return true;
+  } catch (e) {
+    console.error('❌ [DB] 初始化推送日志表失败:', e.message);
+    return false;
+  }
+}
+
+// ── 记录推送状态 ─────────────────────────────
+async function logPushStatus(contentId, platform, status, extra = {}) {
+  try {
+    const conn = await mysql.createConnection({
+      host: process.env.DB_HOST || '82.156.40.94',
+      user: process.env.DB_USER || 'eastaiai',
+      password: process.env.DB_PASSWORD || 'alibaba',
+      database: process.env.DB_NAME || 'eastaiai',
+      charset: 'utf8mb4',
+      connectTimeout: 15000
+    });
+    
+    // UPSERT（存在则更新，不存在则插入）
+    await conn.execute(`
+      INSERT INTO content_publish_log 
+        (content_id, platform, status, error_msg, wechat_media_id, wechat_draft_id, published_at, retry_count)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+      ON DUPLICATE KEY UPDATE
+        status = VALUES(status),
+        error_msg = VALUES(error_msg),
+        wechat_media_id = VALUES(wechat_media_id),
+        wechat_draft_id = VALUES(wechat_draft_id),
+        published_at = VALUES(published_at),
+        retry_count = retry_count + 1,
+        updated_at = CURRENT_TIMESTAMP
+    `, [contentId, platform, status, extra.error || null, extra.mediaId || null, extra.draftId || null, status === 'success' ? new Date() : null]);
+    
+    console.log(`✅ [DB] 推送状态已记录: contentId=${contentId}, platform=${platform}, status=${status}`);
+    await conn.end();
+  } catch (e) {
+    console.error('❌ [DB] 记录推送状态失败:', e.message);
+  }
+}
+
 // ── 健康检查 ────────────────────────────
 router.get('/health', (req, res) => {
     res.json({
@@ -52,12 +133,12 @@ router.post('/wechat', async (req, res) => {
     console.log('📤 [API] 时间:', new Date().toISOString());
     
     try {
-        const { title, content } = req.body;
+        const { title, content, contentId } = req.body;
         
         console.log('📤 [API] 收到请求参数:');
         console.log('   标题:', title ? title.substring(0, 50) : '【空】');
         console.log('   内容长度:', content ? content.length : '【空】');
-        console.log('   内容前100字:', content ? content.substring(0, 100) : '【空】');
+        console.log('   contentId:', contentId || '【空】');
         
         if (!title || !content) {
             console.error('❌ [API] 参数检查失败: 缺少标题或内容');
@@ -88,7 +169,7 @@ router.post('/wechat', async (req, res) => {
         const wechatConfig = {
             appId: process.env.WECHAT_APP_ID,
             appSecret: process.env.WECHAT_APP_SECRET,
-            thumbMediaId: process.env.WECHAT_THUMB_MEDIA_ID,  // ← 新增！从 .env 读取
+            thumbMediaId: process.env.WECHAT_THUMB_MEDIA_ID,
             author: 'WorkBuddy'
         };
         
@@ -139,13 +220,34 @@ router.post('/wechat', async (req, res) => {
             thumbMediaId: wechatConfig.thumbMediaId ? '已配置' : '未配置'
         });
         
+        // === 新增：Markdown → HTML 排版 ===
+        console.log('📤 [API] 开始 Markdown → HTML 排版...');
+        let htmlContent = content;
+        try {
+          // 如果有 marked 库，转为 HTML
+          if (require.resolve('marked')) {
+            const { marked } = require('marked');
+            htmlContent = marked(content);
+            console.log('✅ [API] Markdown → HTML 转换成功');
+          }
+        } catch (e) {
+          console.warn('⚠️ [API] marked 库未安装，使用原始内容');
+        }
+        
+        // === 新增：生成缩略图（AI绘图 或 图库） ===
+        console.log('📤 [API] 生成缩略图...');
+        let thumbMediaId = wechatConfig.thumbMediaId;
+        // TODO: 调用 AI 绘图 API 或 图库 API 生成缩略图
+        // 当前先用默认 thumbMediaId
+        
         // 发布到微信公众号草稿箱
         let result;
         try {
             result = await publisher.publishToWechat({
                 title: title,
-                content: content,
-                description: content.substring(0, 120) + '...'
+                content: htmlContent,  // ← 改用 HTML
+                description: content.substring(0, 120) + '...',
+                thumbMediaId: thumbMediaId  // ← 缩略图
             });
             console.log('📤 [API] ✅ publisher.publishToWechat() 成功');
             console.log('   返回结果:', JSON.stringify(result, null, 2));
@@ -160,18 +262,37 @@ router.post('/wechat', async (req, res) => {
             console.log(`📤 [API] ✅✅✅ 微信公众号草稿发布成功! (耗时 ${elapsed}ms)`);
             console.log('   文章ID:', result.articleId);
             
+            // === 新增：记录推送状态 ===
+            if (contentId) {
+              await initPublishLogTable();
+              await logPushStatus(contentId, 'wechat', 'success', {
+                mediaId: result.mediaId || null,
+                draftId: result.articleId || null
+              });
+            }
+            
             res.json({ 
                 success: true, 
                 message: '微信公众号发布成功',
                 data: { 
                     platform: 'wechat', 
                     articleId: result.articleId,
+                    mediaId: result.mediaId || null,
                     status: 'draft',
                     elapsedMs: elapsed
                 }
             });
         } else {
             console.error('❌ [API] 微信公众号发布返回失败:', result.error);
+            
+            // === 新增：记录推送失败状态 ===
+            if (contentId) {
+              await initPublishLogTable();
+              await logPushStatus(contentId, 'wechat', 'failed', {
+                error: result.error || '未知错误'
+              });
+            }
+            
             throw new Error(result.error || '发布失败');
         }
     } catch (e) {
@@ -203,7 +324,7 @@ router.post('/wechat', async (req, res) => {
 // 流程: 推送CMS数据库 → 同步推微信草稿箱 → 返回双平台结果
 // 
 // ── 内部：推送微信草稿箱（复用插件逻辑）────────────────────────
-async function pushWechatDraft(title, content, thumbMediaId) {
+async function pushWechatDraft(title, content, thumbMediaId, contentId) {
     if (!pluginLoaded || !MultiPlatformPublisher) {
         throw new Error('微信插件未加载');
     }
@@ -215,11 +336,39 @@ async function pushWechatDraft(title, content, thumbMediaId) {
     };
     const publisher = new MultiPlatformPublisher({ wechat: wechatConfig });
     await publisher.init();
-    return await publisher.publishToWechat({
+    
+    // Markdown → HTML
+    let htmlContent = content;
+    try {
+      if (require.resolve('marked')) {
+        const { marked } = require('marked');
+        htmlContent = marked(content);
+      }
+    } catch (e) {}
+    
+    const result = await publisher.publishToWechat({
         title,
-        content,
-        description: content.substring(0, 120) + '...'
+        content: htmlContent,
+        description: content.substring(0, 120) + '...',
+        thumbMediaId: wechatConfig.thumbMediaId
     });
+    
+    // 记录推送状态
+    if (contentId) {
+      await initPublishLogTable();
+      if (result.success) {
+        await logPushStatus(contentId, 'wechat', 'success', {
+          mediaId: result.mediaId || null,
+          draftId: result.articleId || null
+        });
+      } else {
+        await logPushStatus(contentId, 'wechat', 'failed', {
+          error: result.error || '未知错误'
+        });
+      }
+    }
+    
+    return result;
 }
 
 // 
@@ -228,24 +377,49 @@ async function pushWechatDraft(title, content, thumbMediaId) {
 router.post('/cms', async (req, res) => {
     const startTime = Date.now();
     console.log('📤 [API] ========== 开始处理CMS发布请求（同步微信）==========');
-    
+
     try {
-        const { title, content, toWechat, thumbUrl, thumbMediaId } = req.body;
-        
+        const { title, content, toWechat, thumbUrl, thumbMediaId, platforms } = req.body;
+
         if (!title || !content) {
             return res.status(400).json({ success: false, message: '缺少标题或内容' });
         }
-        
-        // 1. 推送到 CMS 数据库
+
+        // ── 发布前方法论检查 ─────────────────────────────────────
+        const checkResult = prePublishCheck(content, { topic: title });
+        if (!checkResult.pass) {
+            console.warn('📤 [API] 发布前检查未通过:', checkResult.errors.join('; '));
+            // 记录但不阻止发布（可配置为转人工审核）
+        } else {
+            console.log('📤 [API] ✅ 发布前检查通过');
+        }
+
+        // 1. 推送到 CMS 数据库（首要：保存起来，不丢失）
         const cmsResult = await cms.pushArticle({ title, content });
         if (!cmsResult.success) {
             throw new Error('CMS写入失败: ' + cmsResult.message);
         }
         console.log(`📤 [API] ✅ CMS写入成功 (ID: ${cmsResult.articleId})`);
         
+        // === 新增：记录 CMS 推送状态 ===
+        await initPublishLogTable();
+        await logPushStatus(cmsResult.articleId, 'cms', 'success', {
+          publishedAt: new Date()
+        });
+        
         // 2. 同步推微信草稿箱（如果有缩略图URL，先上传再推）
         let wechatResult = null;
-        if (toWechat && pluginLoaded) {
+        let xiaohongshuResult = null;
+        
+        // 多平台推送
+        const targetPlatforms = platforms || [];
+        if (!toWechat && targetPlatforms.length === 0) {
+          // 默认只推 CMS
+          targetPlatforms.push('cms');
+        }
+        
+        for (const platform of targetPlatforms) {
+          if (platform === 'wechat' && pluginLoaded) {
             try {
                 let effectiveThumbId = thumbMediaId || process.env.WECHAT_THUMB_MEDIA_ID;
                 
@@ -255,7 +429,7 @@ router.post('/cms', async (req, res) => {
                     effectiveThumbId = process.env.WECHAT_THUMB_MEDIA_ID;
                 }
                 
-                wechatResult = await pushWechatDraft(title, content, effectiveThumbId);
+                wechatResult = await pushWechatDraft(title, content, effectiveThumbId, cmsResult.articleId);
                 if (wechatResult.success) {
                     console.log(`📤 [API] ✅ 微信草稿箱发布成功 (MediaID: ${wechatResult.articleId})`);
                 } else {
@@ -265,6 +439,18 @@ router.post('/cms', async (req, res) => {
                 console.error('📤 [API] ⚠️ 微信推送异常:', e.message);
                 // 不阻断，只记录
             }
+          }
+          
+          // TODO: 小红书推送
+          if (platform === 'xiaohongshu') {
+            console.log('📤 [API] 小红书推送（待实现）');
+            // xiaohongshuResult = await pushXiaohongshu(title, content, cmsResult.articleId);
+          }
+          
+          // TODO: 笔记平台推送
+          if (platform === 'notepad') {
+            console.log('📤 [API] 笔记平台推送（待实现）');
+          }
         }
         
         const elapsed = Date.now() - startTime;
@@ -272,12 +458,17 @@ router.post('/cms', async (req, res) => {
             success: true,
             message: wechatResult?.success ? 'CMS+微信发布成功' : 'CMS发布成功（微信未启用或失败）',
             data: {
-                cms: { platform: 'cms', articleId: cmsResult.articleId },
+                cms: { platform: 'cms', articleId: cmsResult.articleId, status: 'success' },
                 wechat: wechatResult ? {
                     platform: 'wechat',
                     articleId: wechatResult.articleId,
-                    status: 'draft'
+                    status: wechatResult.success ? 'success' : 'failed'
                 } : null,
+                methodologyCheck: {
+                    passed: checkResult.pass,
+                    errors: checkResult.errors,
+                    warnings: checkResult.warnings
+                },
                 elapsedMs: elapsed
             }
         });
@@ -317,7 +508,7 @@ router.post('/cms-to-wechat', async (req, res) => {
         const article = rows[0];
         const thumbMediaId = process.env.WECHAT_THUMB_MEDIA_ID;
         
-        const result = await pushWechatDraft(article.title, article.content, thumbMediaId);
+        const result = await pushWechatDraft(article.title, article.content, thumbMediaId, articleId);
         
         res.json({
             success: !!result.success,
@@ -326,7 +517,7 @@ router.post('/cms-to-wechat', async (req, res) => {
                 platform: 'wechat',
                 articleId: result.articleId,
                 title: article.title,
-                status: 'draft',
+                status: result.success ? 'success' : 'failed',
                 elapsedMs: Date.now() - startTime
             }
         });
@@ -339,7 +530,7 @@ router.post('/cms-to-wechat', async (req, res) => {
 // ── 其他路由保持不变 ─────────────────────────────
 router.post('/xiaohongshu', async (req, res) => {
     try {
-        const { title, content } = req.body;
+        const { title, content, contentId } = req.body;
         
         if (!title || !content) {
             return res.status(400).json({ success: false, message: '缺少标题或内容' });
@@ -348,6 +539,12 @@ router.post('/xiaohongshu', async (req, res) => {
         // TODO: 调用小红书开放平台API发布
         // 当前先返回成功（模拟）
         console.log('发布到小红书:', title);
+        
+        // 记录推送状态
+        if (contentId) {
+          await initPublishLogTable();
+          await logPushStatus(contentId, 'xiaohongshu', 'pending');
+        }
         
         res.json({ 
             success: true, 
@@ -540,6 +737,23 @@ router.get('/topics', async (req, res) => {
         
         const topics = JSON.parse(fs.readFileSync(topicsPath, 'utf8'));
         res.json({ success: true, data: topics });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// ── 预览（Markdown → HTML）────────────────────────────
+router.post('/preview', async (req, res) => {
+    try {
+        const { content } = req.body;
+        if (!content) {
+            return res.json({ success: false, message: '内容不能为空' });
+        }
+        
+        // 使用 marked 转换 Markdown → HTML
+        const html = marked.parse(content);
+        
+        res.json({ success: true, html: html });
     } catch (e) {
         res.status(500).json({ success: false, message: e.message });
     }

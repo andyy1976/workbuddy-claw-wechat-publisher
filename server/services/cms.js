@@ -8,7 +8,8 @@ const DB_CONFIG = {
     password: process.env.DB_PASSWORD || 'alibaba',
     database: process.env.DB_NAME || 'eastaiai',
     port: parseInt(process.env.DB_PORT) || 3306,
-    charset: 'utf8mb4',
+    // charset: 'utf8',
+    // collate: 'utf8_general_ci',
     connectTimeout: 30000,  // 增加到30秒
     ssl: false
 };

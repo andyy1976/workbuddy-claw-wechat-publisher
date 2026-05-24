@@ -653,41 +653,8 @@ async function main() {
             console.log('');
             saveLog(title, topic.id, topic.topic, topic.category, 'SUCCESS', article.length);
             
-            // ── 多平台发布 ──────────────────────────────────────
-            console.log('\n' + '═'.repeat(52));
-            console.log('  🚀 启动多平台发布...');
-            console.log('═'.repeat(52) + '\n');
-            
-            try {
-                // 动态导入多平台发布器
-                const multiPlatform = require('./video-platforms/multi-platform-publisher');
-                
-                const articleData = {
-                    title: title,
-                    content: article,
-                    summary: digest,
-                    topic: topic
-                };
-                
-                // 检查是否启用多平台发布
-                const enableMultiPlatform = process.env.ENABLE_MULTI_PLATFORM === 'true';
-                
-                if (enableMultiPlatform) {
-                    await multiPlatform.publishToAllPlatforms(articleData, {
-                        publishReddit: true,
-                        publishDouyin: false,  // 需要扫码登录，默认关闭
-                        publishYouTube: false, // 需要配置 API，默认关闭
-                        generateVideo: true,
-                        generateManhua: true,
-                        generateAIVideo: false // AI 视频生成较慢，默认关闭
-                    });
-                } else {
-                    console.log('⚠️  多平台发布未启用（设置 ENABLE_MULTI_PLATFORM=true 启用）');
-                }
-            } catch (mpErr) {
-                console.log(`⚠️  多平台发布异常: ${mpErr.message}`);
-            }
-            
+        } else {
+            // ❌ 发布失败（微信返回错误）
             console.error('❌ 发布失败:', JSON.stringify(resp));
             saveLog(title, topic.id, topic.topic, topic.category, 'FAIL', article.length);
         }

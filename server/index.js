@@ -78,7 +78,10 @@ app.use((err, req, res, next) => {
 });
 
 // ── 启动 ──────────────────────────────────────────
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
+    console.log('[Database] 开始初始化...');
+    await initDatabase();
+
     console.log(`
 ╔════════════════════════════════════════════════╗
 ║   WorkBuddy 内容数字员工平台 v6.0               ║
@@ -89,6 +92,50 @@ app.listen(PORT, '0.0.0.0', () => {
 ║   CMS:  http://localhost:${PORT}/api/cms/...      ║
 ╚════════════════════════════════════════════════╝
     `);
+
+
+// ── 初始化数据库表 ─────────────────────────────
+async function initDatabase() {
+  try {
+    const mysql = require('mysql2/promise');
+    const conn = await mysql.createConnection({
+      host: process.env.DB_HOST || '82.156.40.94',
+      user: process.env.DB_USER || 'eastaiai',
+      password: process.env.DB_PASSWORD || 'alibaba',
+      database: process.env.DB_NAME || 'eastaiai',
+      charset: 'utf8mb4',
+      connectTimeout: 15000
+    });
+    
+    console.log('[Database] 检查数据表...');
+    
+    // 创建 content_publish_log 表
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS content_publish_log (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        content_id INT NOT NULL COMMENT 'CMS文章ID',
+        platform VARCHAR(50) NOT NULL COMMENT '平台: wechat/cms/xiaohongshu/notepad',
+        status ENUM('pending', 'success', 'failed', 'retry') NOT NULL DEFAULT 'pending',
+        error_msg TEXT COMMENT '失败原因',
+        wechat_media_id VARCHAR(255) COMMENT '微信返回的media_id',
+        wechat_draft_id VARCHAR(255) COMMENT '微信草稿箱ID',
+        published_at DATETIME COMMENT '成功发布时间',
+        retry_count INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_content (content_id),
+        INDEX idx_status (status),
+        INDEX idx_platform (platform),
+        UNIQUE KEY uk_content_platform (content_id, platform)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='内容推送状态记录表'
+    `);
+    
+    console.log('✅ [Database] content_publish_log 表已就绪');
+    await conn.end();
+  } catch (e) {
+    console.error('❌ [Database] 初始化失败:', e.message);
+  }
+}
 
   // 启动定时任务调度器
   scheduler.startScheduler().then(() => {

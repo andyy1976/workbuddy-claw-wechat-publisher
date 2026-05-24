@@ -151,8 +151,13 @@
 
     function sendToDeaiify() {
         const content = document.getElementById('genContent').textContent;
+        const title = document.getElementById('genTitles').textContent.split('\n')[0] || document.getElementById('genTopic').value;
         if (!content) return showToast('请先生成内容', 'error');
+
+        // 传递内容和标题到去AI味页面
         localStorage.setItem('deaiifyInput', content);
+        localStorage.setItem('deaiifyTitle', title);
+
         location.href = '/deaiify.html';
     }
 
@@ -175,7 +180,22 @@
             }
         } catch (e) {}
     }
-    document.addEventListener('DOMContentLoaded', loadProductOptions);
+    document.addEventListener('DOMContentLoaded', function() {
+      loadProductOptions();
+      
+      // ✅ 恢复草稿
+      const savedContent = localStorage.getItem('generatedContent');
+      const savedTitles = localStorage.getItem('generatedTitles');
+      const savedMeta = localStorage.getItem('generatedMeta');
+      
+      if (savedContent) {
+        document.getElementById('genContent').textContent = savedContent;
+        document.getElementById('genOutput').style.display = 'grid';
+        if (savedTitles) document.getElementById('genTitles').textContent = savedTitles;
+        if (savedMeta) document.getElementById('genMeta').textContent = savedMeta;
+        showToast('已恢复上次生成的内容', 'success');
+      }
+    });
     </script>
 </body>
 </html>

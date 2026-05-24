@@ -84,11 +84,19 @@
   <script>
     // ── 页面加载：从 localStorage 恢复内容 ──
     document.addEventListener('DOMContentLoaded', () => {
+      // 恢复内容
       const saved = localStorage.getItem('deaiifyInput');
       if (saved) {
         document.getElementById('deaiInput').value = saved;
         showToast('已加载从生成页面传递的内容', 'success');
         localStorage.removeItem('deaiifyInput');
+      }
+
+      // 恢复标题（如果有）
+      const savedTitle = localStorage.getItem('deaiifyTitle');
+      if (savedTitle) {
+        // 标题会在发送到发布页时使用，这里不做显示
+        console.log('[deaiify] Loaded title:', savedTitle);
       }
     });
 
@@ -107,8 +115,20 @@
     function sendToPublish() {
       const text = document.getElementById('deaiOutput').textContent;
       if (!text || text === '优化结果将显示在这里...') return showToast('没有可发送的内容', 'error');
-      localStorage.setItem('deaiifiedContent', text);
-      showToast('已保存到发布页面，请切换到「一键发布」', 'success');
+
+      localStorage.setItem('publishContent', text);
+
+      const savedTitle = localStorage.getItem('deaiifyTitle');
+      if (savedTitle) {
+        localStorage.setItem('publishTitle', savedTitle);
+        localStorage.removeItem('deaiifyTitle');
+      }
+
+      // sessionStorage 防止刷新丢失
+      if (savedTitle) { try { sessionStorage.setItem('lastPubTitle', savedTitle); } catch(e) {} }
+
+      showToast('已保存到发布页面，自动跳转中...', 'success');
+      setTimeout(() => { location.href = '/publish.html'; }, 500);
     }
 
     async function deaiifyContent() {
@@ -152,9 +172,25 @@
           stats.style.display = 'flex';
         }
 
+        // ── 显示方法论检查结果 ─────────────────────────────────────
+        if (data.data.methodologyCheck) {
+          const check = data.data.methodologyCheck;
+          if (!check.passed) {
+            showToast('⚠️ 方法论检查未通过: ' + check.errors.join(', '), 'error');
+            // 在统计栏添加检查结果
+            const checkBadge = '<span class="stat-badge" style="color:var(--danger);">⚠️ 检查未通过</span>';
+            stats.innerHTML += checkBadge;
+          } else {
+            showToast('✅ 去AI味完成（已通过方法论检查）', 'success');
+            const checkBadge = '<span class="stat-badge" style="color:var(--success);">✅ 方法论通过</span>';
+            stats.innerHTML += checkBadge;
+          }
+        } else {
+          showToast('去AI味完成！结果已自动保存', 'success');
+        }
+
         // 自动存储供发布页使用
-        localStorage.setItem('deaiifiedContent', result);
-        showToast('去AI味完成！结果已自动保存', 'success');
+        localStorage.setItem('publishContent', result);
 
       } catch (e) {
         output.textContent = '❌ 错误: ' + e.message;
