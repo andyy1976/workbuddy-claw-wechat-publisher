@@ -170,7 +170,7 @@ async function getArticles(options = {}) {
     try {
         connection = await mysql.createConnection(DB_CONFIG);
         
-        let query = 'SELECT id, title, typeid, status, source, addtime FROM lvbo_article WHERE 1=1';
+        let query = 'SELECT aid AS id, title, typeid, status, copyfrom AS source, addtime FROM lvbo_article WHERE 1=1';
         const params = [];
         
         if (categoryId) {

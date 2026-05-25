@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>发布记录 - WorkBuddy</title>
+  <link rel="stylesheet" href="/css/common.css">
+  <style>
+    /* SVG Chart Styles */
+    .chart-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .chart-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 900px) {
+      .chart-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .bar-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      height: 200px;
+      padding: 20px 0 30px 0;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+    .bar-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100%;
+      justify-content: flex-end;
+    }
+    .bar {
+      width: 100%;
+      max-width: 40px;
+      background: var(--accent);
+      border-radius: 4px 4px 0 0;
+      transition: all 0.3s;
+      min-height: 4px;
+      position: relative;
+    }
+    .bar:hover {
+      background: var(--accent2);
+    }
+    .bar-label {
+      font-size: 10px;
+      color: var(--text2);
+      margin-top: 6px;
+      text-align: center;
+    }
+    .bar-value {
+      font-size: 10px;
+      color: var(--text);
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    .pie-chart {
+      width: 200px;
+      height: 200px;
+      margin: 0 auto;
+    }
+    .pie-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 16px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text2);
+    }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    /* Filter Styles */
+    .filter-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .filter-label {
+      font-size: 13px;
+      color: var(--text2);
+    }
+
+    /* Log Panel */
+    .log-panel {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      max-height: 300px;
+      overflow-y: auto;
+      padding: 12px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .log-time {
+      color: var(--accent2);
+    }
+    .log-level-info { color: var(--info); }
+    .log-level-error { color: var(--danger); }
+    .log-level-warn { color: var(--warning); }
+    .log-level-success { color: var(--success); }
+
+    /* Quality Check Result */
+    .quality-result {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-top: 16px;
+      display: none;
+    }
+    .quality-result.show {
+      display: block;
+    }
+    .score-display {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 20px;
+    }
+    .score-circle {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 700;
+      border: 4px solid;
+    }
+    .score-grade-A { border-color: var(--success); color: var(--success); }
+    .score-grade-B { border-color: var(--info); color: var(--info); }
+    .score-grade-C { border-color: var(--warning); color: var(--warning); }
+    .score-grade-D { border-color: var(--danger); color: var(--danger); }
+    .score-details {
+      flex: 1;
+    }
+    .score-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .score-name {
+      color: var(--text2);
+    }
+    .score-value {
+      font-weight: 600;
+    }
+
+    /* Collapsible Section */
+    .collapsible-header {
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .collapsible-header::after {
+      content: '▼';
+      font-size: 10px;
+      transition: transform 0.3s;
+    }
+    .collapsible-header.collapsed::after {
+      transform: rotate(-90deg);
+    }
+    .collapsible-body {
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    .collapsible-body.collapsed {
+      max-height: 0 !important;
+    }
+
+    /* Status Badge */
+    .status-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .status-success { background: rgba(0,184,148,0.15); color: var(--success); }
+    .status-failed { background: rgba(225,112,85,0.15); color: var(--danger); }
+    .status-pending { background: rgba(253,203,110,0.15); color: var(--warning); }
+
+    /* Action Buttons in Table */
+    .table-actions {
+      display: flex;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <h1>🚀 WorkBuddy</h1>
+        <p>内容数字员工平台 v6.0</p>
+      </div>
+      <nav class="sidebar-nav" id="mainNav"></nav>
+      <div class="sidebar-footer">
+        <div class="status"><span class="dot"></span><span id="serverStatus">服务运行中</span></div>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <h2>📊 发布记录管理</h2>
+        <div class="topbar-actions">
+          <button class="btn btn-outline" onclick="loadOverview()">刷新统计</button>
+          <button class="btn btn-primary" onclick="loadLogs()">刷新记录</button>
+        </div>
+      </header>
+
+      <div class="content">
+        <!-- 统计卡片 -->
+        <div class="stats-row" id="statsCards">
+          <div class="stat-card">
+            <div class="label">今日发布</div>
+            <div class="value" id="todayCount">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">本周发布</div>
+            <div class="value" id="weekCount">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">成功率</div>
+            <div class="value" id="successRate">0%</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">平均耗时</div>
+            <div class="value" id="avgTime">0s</div>
+          </div>
+        </div>
+
+        <!-- 筛选器 -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🔍 筛选条件</span>
+            <button class="btn btn-sm btn-outline" onclick="resetFilters()">重置</button>
+          </div>
+          <div class="filter-row">
+            <div class="filter-group">
+              <span class="filter-label">平台:</span>
+              <select class="form-select" id="filterPlatform" style="width:150px;" onchange="loadLogs()">
+                <option value="">全部</option>
+                <option value="cms">CMS</option>
+                <option value="wechat">微信公众号</option>
+                <option value="xiaohongshu">小红书</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">状态:</span>
+              <select class="form-select" id="filterStatus" style="width:150px;" onchange="loadLogs()">
+                <option value="">全部</option>
+                <option value="success">成功</option>
+                <option value="failed">失败</option>
+                <option value="pending">待处理</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">开始日期:</span>
+              <input type="date" class="form-input" id="filterDateFrom" style="width:160px;" onchange="loadLogs()">
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">结束日期:</span>
+              <input type="date" class="form-input" id="filterDateTo" style="width:160px;" onchange="loadLogs()">
+            </div>
+          </div>
+        </div>
+
+        <!-- 统计分析图表 -->
+        <div class="chart-grid">
+          <div class="chart-container">
+            <div class="chart-title">📈 每日发布趋势（近7天）</div>
+            <div class="bar-chart" id="dailyTrendChart">
+              <div class="bar-item">
+                <div style="color:var(--text2);font-size:12px;">加载中...</div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-container">
+            <div class="chart-title">🥧 平台分布</div>
+            <div id="platformPieChart">
+              <div style="text-align:center;color:var(--text2);padding:40px 0;">加载中...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 发布记录表格 -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📄 发布记录</span>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-sm btn-outline" onclick="exportLogs()">导出</button>
+              <button class="btn btn-sm btn-danger" onclick="clearOldLogs()">清空旧日志</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="data-table" id="logsTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>标题</th>
+                  <th>平台</th>
+                  <th>状态</th>
+                  <th>耗时</th>
+                  <th>创建时间</th>
+                  <th>发布时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="logsTableBody">
+                <tr>
+                  <td colspan="8" style="text-align:center;color:var(--text2);padding:16px;">点击"刷新记录"加载数据</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- 分页 -->
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding:0 8px;">
+            <div style="font-size:13px;color:var(--text2);" id="paginationInfo">共 0 条记录</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button class="btn btn-sm btn-outline" id="prevPage" onclick="changePage(-1)">上一页</button>
+              <span style="font-size:13px;color:var(--text);" id="pageInfo">1 / 1</span>
+              <button class="btn btn-sm btn-outline" id="nextPage" onclick="changePage(1)">下一页</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 日志面板 -->
+        <div class="card">
+          <div class="card-header collapsible-header" id="logPanelHeader" onclick="toggleLogPanel()">
+            <span class="card-title">📋 系统日志</span>
+          </div>
+          <div class="collapsible-body" id="logPanelBody" style="max-height:400px;overflow:hidden;">
+            <div class="log-panel" id="systemLog">
+              <div class="log-entry"><span class="log-time">[等待加载]</span> <span class="log-level-info">系统日志将在此显示</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 质量检查工具 -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🔍 内容质量检查工具</span>
+          </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label class="form-label">标题</label>
+            <input class="form-input" id="checkTitle" placeholder="输入文章标题...">
+          </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label class="form-label">选题关键词（用逗号分隔）</label>
+            <input class="form-input" id="checkTopic" placeholder="例如：AI,人工智能,大模型">
+          </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label class="form-label">角度</label>
+            <input class="form-input" id="checkAngle" placeholder="输入文章角度...">
+          </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label class="form-label">内容 (支持 Markdown)</label>
+            <textarea class="form-input form-textarea" id="checkContent" rows="10" placeholder="粘贴或输入文章内容..."></textarea>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-success" onclick="runQualityCheck()">🔍 开始检查</button>
+            <button class="btn btn-outline" onclick="clearQualityCheck()">清空</button>
+          </div>
+
+          <!-- 质量检查结果 -->
+          <div class="quality-result" id="qualityResult">
+            <div class="score-display" id="scoreDisplay"></div>
+            <div id="qualityErrors" style="margin-bottom:12px;"></div>
+            <div id="qualityWarnings" style="margin-bottom:12px;"></div>
+            <div id="qualityScores"></div>
+            <div id="qualityStats" style="margin-top:16px;padding:12px;background:var(--bg);border-radius:6px;font-size:13px;"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="/js/common.js"></script>
+  <script>
+    // ── 全局变量 ─────────────────────────────────────
+    let currentPage = 1;
+    let pageSize = 20;
+    let totalLogs = 0;
+
+    // ── Toast ─────────────────────────────────────────
+    function showToast(msg, type) {
+      type = type || 'success';
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast ' + type;
+      setTimeout(function() { t.classList.add('show'); }, 10);
+      setTimeout(function() { t.classList.remove('show'); }, 3500);
+    }
+
+    // ── 加载统计概览 ───────────────────────────────────
+    async function loadOverview() {
+      try {
+        var r = await fetch(API + '/api/stats/overview?days=7');
+        var d = await r.json();
+
+        if (d.success) {
+          var data = d.data;
+          document.getElementById('todayCount').textContent = data.todayPublished || 0;
+          document.getElementById('weekCount').textContent = data.weekPublished || 0;
+          document.getElementById('successRate').textContent = (data.successRate || 0) + '%';
+          document.getElementById('avgTime').textContent = (data.avgPublishTime || 0) + 'ms';
+
+          // 渲染每日趋势图
+          renderDailyTrend(data.dailyTrend || []);
+
+          // 渲染平台分布
+          renderPlatformPie(data.byPlatform || {});
+        }
+      } catch (e) {
+        console.error('[logs] loadOverview error:', e);
+        showToast('加载统计失败: ' + e.message, 'error');
+      }
+    }
+
+    // ── 渲染每日趋势图 ─────────────────────────────────
+    function renderDailyTrend(trendData) {
+      var chartEl = document.getElementById('dailyTrendChart');
+      if (!trendData.length) {
+        chartEl.innerHTML = '<div style="color:var(--text2);font-size:12px;text-align:center;width:100%;">暂无数据</div>';
+        return;
+      }
+
+      var maxCount = Math.max(...trendData.map(d => d.count), 1);
+      var html = '';
+
+      trendData.forEach(function(item) {
+        var height = Math.round((item.count / maxCount) * 100);
+        var dateStr = item.date ? item.date.split('-').slice(1).join('/') : '';
+        html += '<div class="bar-item">' +
+                  '<div class="bar-value">' + item.count + '</div>' +
+                  '<div class="bar" style="height:' + height + '%;"></div>' +
+                  '<div class="bar-label">' + dateStr + '</div>' +
+                '</div>';
+      });
+
+      chartEl.innerHTML = html;
+    }
+
+    // ── 渲染平台分布饼图 ───────────────────────────────
+    function renderPlatformPie(platformData) {
+      var container = document.getElementById('platformPieChart');
+      var platforms = ['cms', 'wechat', 'xiaohongshu'];
+      var colors = ['#6c5ce7', '#00b894', '#fdcb6e'];
+      var labels = ['CMS', '微信公众号', '小红书'];
+
+      var total = platforms.reduce(function(sum, p) { return sum + (platformData[p] || 0); }, 0);
+
+      if (total === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--text2);padding:40px 0;">暂无数据</div>';
+        return;
+      }
+
+      // 使用 SVG 绘制饼图
+      var size = 200;
+      var cx = size / 2;
+      var cy = size / 2;
+      var radius = 80;
+      var svgParts = '';
+      var legendHtml = '<div class="pie-legend">';
+
+      var currentAngle = -90; // 从顶部开始
+
+      platforms.forEach(function(p, i) {
+        var count = platformData[p] || 0;
+        if (count === 0) return;
+
+        var percentage = (count / total) * 100;
+        var angle = (percentage / 100) * 360;
+        var endAngle = currentAngle + angle;
+
+        // 计算路径
+        var startRad = (currentAngle * Math.PI) / 180;
+        var endRad = (endAngle * Math.PI) / 180;
+
+        var x1 = cx + radius * Math.cos(startRad);
+        var y1 = cy + radius * Math.sin(startRad);
+        var x2 = cx + radius * Math.cos(endRad);
+        var y2 = cy + radius * Math.sin(endRad);
+
+        var largeArc = angle > 180 ? 1 : 0;
+
+        var path = 'M ' + cx + ',' + cy + ' L ' + x1 + ',' + y1 + ' A ' + radius + ',' + radius + ' 0 ' + largeArc + ' 1 ' + x2 + ',' + y2 + ' Z';
+
+        svgParts += '<path d="' + path + '" fill="' + colors[i] + '" stroke="' + colors[i] + '" opacity="0.8" />';
+
+        legendHtml += '<div class="legend-item">' +
+                        '<span class="legend-dot" style="background:' + colors[i] + ';"></span>' +
+                        labels[i] + ' (' + count + ')' +
+                      '</div>';
+
+        currentAngle = endAngle;
+      });
+
+      // 中心圆（甜甜圈效果）
+      var centerCircle = '<circle cx="' + cx + '" cy="' + cy + '" r="' + (radius * 0.6) + '" fill="var(--surface)" />' +
+                         '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" dominant-baseline="middle" fill="var(--text)" font-size="20" font-weight="bold">' + total + '</text>' +
+                         '<text x="' + cx + '" y="' + (cy + 20) + '" text-anchor="middle" dominant-baseline="middle" fill="var(--text2)" font-size="12">总计</text>';
+
+      legendHtml += '</div>';
+
+      container.innerHTML = '<svg class="pie-chart" viewBox="0 0 ' + size + ' ' + size + '" xmlns="http://www.w3.org/2000/svg">' +
+                            svgParts + centerCircle +
+                          '</svg>' +
+                          legendHtml;
+    }
+
+    // ── 加载发布记录 ───────────────────────────────────
+    async function loadLogs() {
+      try {
+        var params = new URLSearchParams();
+        params.append('page', currentPage);
+        params.append('pageSize', pageSize);
+
+        var platform = document.getElementById('filterPlatform').value;
+        var status = document.getElementById('filterStatus').value;
+        var dateFrom = document.getElementById('filterDateFrom').value;
+        var dateTo = document.getElementById('filterDateTo').value;
+
+        if (platform) params.append('platform', platform);
+        if (status) params.append('status', status);
+        if (dateFrom) params.append('dateFrom', dateFrom);
+        if (dateTo) params.append('dateTo', dateTo);
+
+        var r = await fetch(API + '/api/stats/publish-logs?' + params.toString());
+        var d = await r.json();
+
+        if (d.success) {
+          renderLogsTable(d.data.list || []);
+          totalLogs = d.data.pagination.total;
+          updatePagination(d.data.pagination);
+        } else {
+          showToast('加载记录失败: ' + d.message, 'error');
+        }
+      } catch (e) {
+        console.error('[logs] loadLogs error:', e);
+        showToast('加载记录失败: ' + e.message, 'error');
+      }
+    }
+
+    // ── 渲染记录表格 ───────────────────────────────────
+    function renderLogsTable(logs) {
+      var tbody = document.getElementById('logsTableBody');
+
+      if (!logs.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text2);padding:16px;">暂无记录</td></tr>';
+        return;
+      }
+
+      var html = '';
+      logs.forEach(function(log) {
+        var statusClass = 'status-' + log.status;
+        var platformName = { cms: 'CMS', wechat: '微信公众号', xiaohongshu: '小红书' }[log.platform] || log.platform;
+
+        var publishedAt = log.published_at ? new Date(log.published_at).toLocaleString('zh-CN') : '-';
+        var createdAt = log.created_at ? new Date(log.created_at).toLocaleString('zh-CN') : '-';
+
+        // 计算耗时
+        var timeCost = '-';
+        if (log.published_at && log.created_at) {
+          var start = new Date(log.created_at).getTime();
+          var end = new Date(log.published_at).getTime();
+          var diff = end - start;
+          if (diff > 0) {
+            timeCost = diff < 1000 ? diff + 'ms' : (diff / 1000).toFixed(1) + 's';
+          }
+        }
+
+        html += '<tr>' +
+                  '<td>' + log.id + '</td>' +
+                  '<td title="' + (log.title || '-') + '">' + (log.title || '-').substring(0, 30) + (log.title && log.title.length > 30 ? '...' : '') + '</td>' +
+                  '<td>' + platformName + '</td>' +
+                  '<td><span class="status-badge ' + statusClass + '">' + log.status + '</span></td>' +
+                  '<td>' + timeCost + '</td>' +
+                  '<td>' + createdAt + '</td>' +
+                  '<td>' + publishedAt + '</td>' +
+                  '<td>' +
+                    '<div class="table-actions">' +
+                      (log.status === 'failed' ? '<button class="btn btn-sm btn-outline" onclick="retryPublish(' + log.content_id + ',\'' + log.platform + '\')" title="重试">🔄</button>' : '') +
+                      '<button class="btn btn-sm btn-outline" onclick="viewLogDetail(' + log.id + ')" title="详情">👁️</button>' +
+                      '<button class="btn btn-sm btn-danger" onclick="deleteLog(' + log.id + ')" title="删除">🗑️</button>' +
+                    '</div>' +
+                  '</td>' +
+                '</tr>';
+      });
+
+      tbody.innerHTML = html;
+    }
+
+    // ── 更新分页 ───────────────────────────────────────
+    function updatePagination(pagination) {
+      document.getElementById('paginationInfo').textContent = '共 ' + pagination.total + ' 条记录';
+      document.getElementById('pageInfo').textContent = pagination.page + ' / ' + pagination.totalPages;
+      document.getElementById('prevPage').disabled = pagination.page <= 1;
+      document.getElementById('nextPage').disabled = pagination.page >= pagination.totalPages;
+    }
+
+    // ── 翻页 ───────────────────────────────────────────
+    function changePage(delta) {
+      currentPage += delta;
+      if (currentPage < 1) currentPage = 1;
+      loadLogs();
+    }
+
+    // ── 重置筛选 ───────────────────────────────────────
+    function resetFilters() {
+      document.getElementById('filterPlatform').value = '';
+      document.getElementById('filterStatus').value = '';
+      document.getElementById('filterDateFrom').value = '';
+      document.getElementById('filterDateTo').value = '';
+      currentPage = 1;
+      loadLogs();
+    }
+
+    // ── 重试发布 ───────────────────────────────────────
+    async function retryPublish(contentId, platform) {
+      if (!confirm('确认重试发布？')) return;
+
+      try {
+        var r = await fetch(API + '/api/stats/retry/' + contentId + '/' + platform, {
+          method: 'POST'
+        });
+        var d = await r.json();
+
+        if (d.success) {
+          showToast('重试任务已提交');
+          loadLogs();
+        } else {
+          showToast('重试失败: ' + d.message, 'error');
+        }
+      } catch (e) {
+        showToast('重试失败: ' + e.message, 'error');
+      }
+    }
+
+    // ── 查看详情 ───────────────────────────────────────
+    async function viewLogDetail(logId) {
+      // 简单实现：弹窗显示详情
+      alert('查看详情功能开发中，日志ID: ' + logId);
+    }
+
+    // ── 删除记录 ───────────────────────────────────────
+    async function deleteLog(logId) {
+      if (!confirm('确认删除这条记录？')) return;
+
+      try {
+        var r = await fetch(API + '/api/stats/publish-log/' + logId, {
+          method: 'DELETE'
+        });
+        var d = await r.json();
+
+        if (d.success) {
+          showToast('删除成功');
+          loadLogs();
+        } else {
+          showToast('删除失败: ' + d.message, 'error');
+        }
+      } catch (e) {
+        showToast('删除失败: ' + e.message, 'error');
+      }
+    }
+
+    // ── 导出日志 ───────────────────────────────────────
+    function exportLogs() {
+      showToast('导出功能开发中...', 'error');
+    }
+
+    // ── 清空旧日志 ─────────────────────────────────────
+    async function clearOldLogs() {
+      var days = prompt('清空多少天前的日志？', '30');
+      if (!days) return;
+
+      var date = new Date();
+      date.setDate(date.getDate() - parseInt(days));
+      var beforeDate = date.toISOString().split('T')[0];
+
+      if (!confirm('确认清空 ' + beforeDate + ' 之前的日志？')) return;
+
+      try {
+        var r = await fetch(API + '/api/stats/clear-logs?before=' + beforeDate, {
+          method: 'DELETE'
+        });
+        var d = await r.json();
+
+        if (d.success) {
+          showToast('已删除 ' + d.data.deletedCount + ' 条记录');
+          loadLogs();
+          loadOverview();
+        } else {
+          showToast('清空失败: ' + d.message, 'error');
+        }
+      } catch (e) {
+        showToast('清空失败: ' + e.message, 'error');
+      }
+    }
+
+    // ── 折叠日志面板 ───────────────────────────────────
+    function toggleLogPanel() {
+      var header = document.getElementById('logPanelHeader');
+      var body = document.getElementById('logPanelBody');
+
+      header.classList.toggle('collapsed');
+      body.classList.toggle('collapsed');
+
+      if (!body.classList.contains('collapsed')) {
+        body.style.maxHeight = '400px';
+        loadSystemLog();
+      } else {
+        body.style.maxHeight = '0';
+      }
+    }
+
+    // ── 加载系统日志 ───────────────────────────────────
+    async function loadSystemLog() {
+      // 模拟系统日志（实际应该从后端API获取）
+      var logEl = document.getElementById('systemLog');
+      var now = new Date().toLocaleTimeString('zh-CN');
+
+      logEl.innerHTML = '';
+      var logs = [
+        { time: now, level: 'info', msg: '系统初始化完成' },
+        { time: now, level: 'info', msg: '数据库连接成功' },
+        { time: now, level: 'info', msg: '定时任务已启动' }
+      ];
+
+      logs.forEach(function(log) {
+        var entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.innerHTML = '<span class="log-time">[' + log.time + ']</span> <span class="log-level-' + log.level + '">' + log.msg + '</span>';
+        logEl.appendChild(entry);
+      });
+    }
+
+    // ── 质量检查 ───────────────────────────────────────
+    async function runQualityCheck() {
+      var title = document.getElementById('checkTitle').value.trim();
+      var topic = document.getElementById('checkTopic').value.trim();
+      var angle = document.getElementById('checkAngle').value.trim();
+      var content = document.getElementById('checkContent').value.trim();
+
+      if (!content) {
+        showToast('请输入内容', 'error');
+        return;
+      }
+
+      try {
+        var r = await fetch(API + '/api/stats/quality-check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content, title, topic, angle })
+        });
+
+        var d = await r.json();
+
+        if (d.success) {
+          displayQualityResult(d.data);
+        } else {
+          showToast('检查失败: ' + d.message, 'error');
+        }
+      } catch (e) {
+        console.error('[logs] quality check error:', e);
+        showToast('检查失败: ' + e.message, 'error');
+      }
+    }
+
+    // ── 显示质量检查结果 ───────────────────────────────
+    function displayQualityResult(result) {
+      var resultEl = document.getElementById('qualityResult');
+      resultEl.classList.add('show');
+
+      // 评分展示
+      var gradeClass = 'score-grade-' + result.grade;
+      var scoreHtml = '<div class="score-circle ' + gradeClass + '">' + result.score + '</div>' +
+                      '<div class="score-details">' +
+                        '<div style="font-size:20px;font-weight:600;margin-bottom:4px;">等级: ' + result.grade + '</div>' +
+                        '<div style="font-size:14px;color:var(--text2);">综合评分: ' + result.score + ' / ' + result.maxScore + '</div>' +
+                      '</div>';
+
+      document.getElementById('scoreDisplay').innerHTML = scoreHtml;
+
+      // 错误列表
+      var errorsHtml = '';
+      if (result.errors && result.errors.length) {
+        errorsHtml = '<div style="padding:12px;background:rgba(225,112,85,0.1);border:1px solid var(--danger);border-radius:6px;">' +
+                        '<div style="font-weight:600;color:var(--danger);margin-bottom:8px;">❌ 错误 (' + result.errors.length + ')</div>' +
+                        '<ul style="margin:0;padding-left:20px;font-size:13px;">' +
+                          result.errors.map(function(e) { return '<li>' + e + '</li>'; }).join('') +
+                        '</ul>' +
+                      '</div>';
+      }
+      document.getElementById('qualityErrors').innerHTML = errorsHtml;
+
+      // 警告列表
+      var warningsHtml = '';
+      if (result.warnings && result.warnings.length) {
+        warningsHtml = '<div style="padding:12px;background:rgba(253,203,110,0.1);border:1px solid var(--warning);border-radius:6px;">' +
+                          '<div style="font-weight:600;color:var(--warning);margin-bottom:8px;">⚠️ 警告 (' + result.warnings.length + ')</div>' +
+                          '<ul style="margin:0;padding-left:20px;font-size:13px;">' +
+                            result.warnings.map(function(w) { return '<li>' + w + '</li>'; }).join('') +
+                          '</ul>' +
+                        '</div>';
+      }
+      document.getElementById('qualityWarnings').innerHTML = warningsHtml;
+
+      // 各维度评分
+      var scoresHtml = '<div style="font-weight:600;margin-bottom:8px;">各维度评分:</div>';
+      for (var key in result.scores) {
+        var score = result.scores[key];
+        var label = {
+          baseCheck: '基础检查',
+          length: '字数',
+          structure: '结构',
+          title: '标题质量',
+          titleAttraction: '标题吸引力',
+          aiTaste: 'AI味检测',
+          readability: '可读性',
+          keywordDensity: '关键词密度',
+          compliance: '合规性'
+        }[key] || key;
+
+        var color = score >= 85 ? 'var(--success)' : score >= 70 ? 'var(--info)' : score >= 55 ? 'var(--warning)' : 'var(--danger)';
+        scoresHtml += '<div class="score-item">' +
+                        '<span class="score-name">' + label + '</span>' +
+                        '<span class="score-value" style="color:' + color + ';">' + Math.round(score) + '</span>' +
+                      '</div>';
+      }
+      document.getElementById('qualityScores').innerHTML = scoresHtml;
+
+      // 统计信息
+      var stats = result.stats || {};
+      var statsHtml = '<strong>统计信息:</strong><br>' +
+                      '字数: ' + (stats.charCount || 0) + ' | ' +
+                      '段落: ' + (stats.paragraphCount || 0) + ' | ' +
+                      '句子: ' + (stats.sentenceCount || 0) + ' | ' +
+                      '平均句长: ' + (stats.avgSentenceLength || 0) + '字 | ' +
+                      'AI味命中: ' + (stats.aiHitCount || 0) + '次';
+
+      document.getElementById('qualityStats').innerHTML = statsHtml;
+    }
+
+    // ── 清空质量检查 ───────────────────────────────────
+    function clearQualityCheck() {
+      document.getElementById('checkTitle').value = '';
+      document.getElementById('checkTopic').value = '';
+      document.getElementById('checkAngle').value = '';
+      document.getElementById('checkContent').value = '';
+      document.getElementById('qualityResult').classList.remove('show');
+    }
+
+    // ── 初始化 ─────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function() {
+      loadNavigation();
+      checkHealth();
+      loadOverview();
+      loadLogs();
+    });
+  </script>
+</body>
+</html>

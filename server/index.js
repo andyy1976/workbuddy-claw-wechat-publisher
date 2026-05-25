@@ -41,6 +41,8 @@ const tasksRoutes = require('./routes/tasks');  // 任务管理路由
 const methodologyRoutes = require('./routes/methodology');
 const methodologyPipelineRoutes = require('./routes/methodology-pipeline');
 const skillsRoutes = require('./routes/skills');
+const statsRoutes = require('./routes/stats');
+const logsRoutes = require('./routes/logs');
 const scheduler = require('./services/scheduler');
 
 app.use('/api/content', contentRoutes);
@@ -54,6 +56,8 @@ app.use('/api/tasks', tasksRoutes);  // 注册任务管理路由
 app.use('/api/methodology', methodologyRoutes);
 app.use('/api/methodology', methodologyPipelineRoutes);
 app.use('/api/skills', skillsRoutes);
+app.use('/api/stats', statsRoutes);
+app.use('/api/logs', logsRoutes);
 
 // ── 健康检查 ──────────────────────────────────────
 app.get('/api/health', (req, res) => {

@@ -29,22 +29,22 @@
                 <div class="stats-row">
                     <div class="stat-card">
                         <div class="label">今日生成</div>
-                        <div class="value">-</div>
+                        <div class="value"><span id="stat-today">-</span></div>
                         <div class="change up">内容数字员工</div>
                     </div>
                     <div class="stat-card">
                         <div class="label">去AI味优化</div>
-                        <div class="value">-</div>
+                        <div class="value"><span id="stat-deaiify">-</span></div>
                         <div class="change up">卡兹克风格</div>
                     </div>
                     <div class="stat-card">
                         <div class="label">已发布CMS</div>
-                        <div class="value">-</div>
+                        <div class="value"><span id="stat-published">-</span></div>
                         <div class="change text-muted">多平台分发</div>
                     </div>
                     <div class="stat-card">
                         <div class="label">产品数据源</div>
-                        <div class="value">-</div>
+                        <div class="value"><span id="stat-products">-</span></div>
                         <div class="change text-accent">BOM/工艺/质量</div>
                     </div>
                 </div>
@@ -105,7 +105,27 @@
             </div>
         </div>
     </div>
-    <div class="toast" id="toast"></div>
+    
+<script>
+// Load real stats from API
+async function loadDashboardStats() {
+    try {
+        const r = await fetch('/api/stats/overview');
+        const d = await r.json();
+        if (d.success && d.data) {
+            const s = d.data;
+            const el1 = document.getElementById('stat-today');
+            const el2 = document.getElementById('stat-published');
+            const el3 = document.getElementById('stat-products');
+            if (el1) el1.textContent = s.todayPublished || 0;
+            if (el2) el2.textContent = s.totalArticles || 0;
+            if (el3) el3.textContent = s.weekPublished || 0;
+        }
+    } catch(e) { console.error('Stats load failed:', e); }
+}
+document.addEventListener('DOMContentLoaded', loadDashboardStats);
+</script>
+<div class="toast" id="toast"></div>
     <script src="/js/common.js"></script>
 </body>
 </html>
