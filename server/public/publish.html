@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -38,7 +38,7 @@
           <div class="section-tab" data-tab="pub-single" onclick="switchTab('pub-single')">单篇发布</div>
           <div class="section-tab" data-tab="pub-batch" onclick="switchTab('pub-batch')">批量推送</div>
           <div class="section-tab" data-tab="pub-assets" onclick="switchTab('pub-assets')">素材生成</div>
-          <div class="section-tab" data-tab="pub-history" onclick="switchTab('pub-history')">发布记录</div>
+
         </div>
 
         <!-- ═══ AI自动生成 ═══ -->
@@ -213,19 +213,7 @@
           </div>
         </div>
 
-        <!-- ═══ 发布记录 ═══ -->
-        <div class="tab-pane" id="tab-pub-history">
-          <div class="card">
-            <div class="card-header">
-              <span class="card-title">发布记录</span>
-              <button class="btn btn-sm btn-outline" onclick="loadPublishHistory()">刷新</button>
-            </div>
-            <table class="data-table" id="publishHistoryTable">
-              <thead><tr><th>时间</th><th>标题</th><th>平台</th><th>状态</th></tr></thead>
-              <tbody id="publishHistoryBody"><tr><td colspan="4" style="text-align:center;color:var(--text2);padding:16px;">点击"刷新"加载记录</td></tr></tbody>
-            </table>
-          </div>
-        </div>
+
 
       </div><!-- /content -->
     </div><!-- /main -->
@@ -424,7 +412,7 @@
             content: content,
             categoryId: categoryId ? parseInt(categoryId) : null,
             source: source || 'WorkBuddy',
-            toWechat: false
+            toWechat: document.getElementById('pubToWechat') ? document.getElementById('pubToWechat').checked : true
           })
         });
         var d = await r.json();
@@ -650,37 +638,6 @@
     }
 
     // ════════════════════════════════════════════
-    //  发布记录
-    // ════════════════════════════════════════════
-
-    async function loadPublishHistory() {
-      var tbody = document.getElementById('publishHistoryBody');
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:16px;">加载中...</td></tr>';
-
-      try {
-        var r = await fetch(API + '/api/cms/articles?page=1&pageSize=20');
-        var d = await r.json();
-
-        if (d.success && Array.isArray(d.data)) {
-          if (!d.data.length) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:16px;">暂无发布记录</td></tr>';
-            return;
-          }
-          tbody.innerHTML = d.data.map(function(a) {
-            return '<tr>'
-              + '<td style="font-size:12px;color:var(--text2);">' + (a.addtime || '-') + '</td>'
-              + '<td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;" title="' + (a.title||'') + '">' + (a.title||'-') + '</td>'
-              + '<td>CMS</td>'
-              + '<td><span class="badge badge-success">已发布</span></td>'
-              + '</tr>';
-          }).join('');
-        } else {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--danger);">加载失败</td></tr>';
-        }
-      } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--danger);">' + e.message + '</td></tr>';
-      }
-    }
 
     // ════════════════════════════════════════════
     //  页面初始化 - 加载下拉数据

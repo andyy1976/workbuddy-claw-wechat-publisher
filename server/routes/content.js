@@ -4,6 +4,8 @@
  * POST /api/content/deaiify      - 去AI味优化
  * POST /api/content/titles      - 标题生成
  * POST /api/content/outline     - 内容大纲生成
+ * POST /api/content/save        - 保存内容到CMS
+ * POST /api/content/publish     - 发布内容（独立于大模型）
  */
 
 const express = require('express');
@@ -151,6 +153,62 @@ router.post('/outline', async (req, res) => {
                 contentHints: productData.contentHints
             }
         });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// ── 保存内容到CMS ──────────────────────────────────
+router.post('/save', async (req, res) => {
+    try {
+        const { title, content, categoryId, source } = req.body;
+        
+        if (!title || !content) {
+            return res.status(400).json({ success: false, message: '缺少标题或内容' });
+        }
+        
+        const publishFlow = require('../services/publish-flow');
+        const result = await publishFlow.saveToCMS(title, content, categoryId || 0, source || 'AI生成');
+        
+        if (result.success) {
+            res.json({ success: true, data: { aid: result.articleId } });
+        } else {
+            res.status(500).json({ success: false, message: result.error || 'CMS保存失败' });
+        }
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// ── 发布内容（独立于大模型）───────────────────────────────
+router.post('/publish', async (req, res) => {
+    try {
+        const { 
+            title, 
+            content, 
+            categoryId, 
+            toCMS = true, 
+            toWechat = true,
+            source = 'WorkBuddy',
+            thumbUrl 
+        } = req.body;
+        
+        if (!title || !content) {
+            return res.status(400).json({ success: false, message: '缺少标题或内容' });
+        }
+        
+        const publishFlow = require('../services/publish-flow');
+        const result = await publishFlow.publishFlow({
+            title,
+            content,
+            categoryId: categoryId || 0,
+            toCMS,
+            toWechat,
+            source,
+            thumbUrl
+        });
+        
+        res.json(result);
     } catch (e) {
         res.status(500).json({ success: false, message: e.message });
     }

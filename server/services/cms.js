@@ -164,13 +164,14 @@ async function pushArticle(article, retryCount = 0) {
  * 获取CMS文章列表
  */
 async function getArticles(options = {}) {
-    const { categoryId, page = 1, pageSize = 20 } = options;
+    const { categoryId, page = 1, pageSize = 20, status = null, keyword = null } = options;
     
     let connection;
     try {
         connection = await mysql.createConnection(DB_CONFIG);
         
-        let query = 'SELECT aid AS id, title, typeid, status, copyfrom AS source, addtime FROM lvbo_article WHERE 1=1';
+        // 列表查询不需要 content 字段（太大），详情用 getArticleById()
+        let query = 'SELECT aid, title, typeid, status, copyfrom AS source, addtime FROM lvbo_article WHERE 1=1';
         const params = [];
         
         if (categoryId) {
@@ -178,15 +179,75 @@ async function getArticles(options = {}) {
             params.push(categoryId);
         }
         
-        query += ' ORDER BY addtime DESC LIMIT ? OFFSET ?';
-        params.push(parseInt(pageSize), (parseInt(page) - 1) * parseInt(pageSize));
+        if (status !== null) {
+            query += ' AND status = ?';
+            params.push(status);
+        }
         
-        const [rows] = await connection.execute(query, params);
+        if (keyword) {
+            query += ' AND title LIKE ?';
+            params.push('%' + keyword + '%');
+        }
         
-        return { success: true, data: rows };
+        // LIMIT/OFFSET 直接拼入 SQL，避免 mysql2 prepared statement 参数类型问题
+        const offset = (parseInt(page) - 1) * parseInt(pageSize);
+        query += ' ORDER BY addtime DESC LIMIT ' + parseInt(pageSize) + ' OFFSET ' + offset;
+        
+        // 使用 query() 而非 execute()，避免 LIMIT 参数绑定问题
+        const [rows] = await connection.query(query, params);
+        
+        const list = rows.map(r => ({
+            aid: r.aid,
+            id: r.aid,
+            title: r.title,
+            typeid: r.typeid,
+            status: r.status,
+            source: r.source,
+            created_at: r.addtime
+        }));
+        
+        return { success: true, data: { list, pagination: { total: rows.length, page, pageSize } } };
     } catch (e) {
         console.error('[getArticles] 数据库查询失败:', e.message);
         return { success: false, message: e.message };
+    } finally {
+        if (connection) {
+            try { await connection.end(); } catch (e) {}
+        }
+    }
+}
+
+/**
+ * 获取单篇文章详情
+ */
+async function getArticleById(aid) {
+    let connection;
+    try {
+        connection = await mysql.createConnection(DB_CONFIG);
+        
+        const [rows] = await connection.execute(
+            'SELECT aid, title, typeid, status, copyfrom AS source, addtime, content FROM lvbo_article WHERE aid = ?',
+            [aid]
+        );
+        
+        if (rows.length === 0) {
+            return null;
+        }
+        
+        const r = rows[0];
+        return {
+            aid: r.aid,
+            id: r.aid,
+            title: r.title,
+            typeid: r.typeid,
+            status: r.status,
+            source: r.source,
+            content: r.content,
+            created_at: r.addtime
+        };
+    } catch (e) {
+        console.error('[getArticleById] 数据库查询失败:', e.message);
+        return null;
     } finally {
         if (connection) {
             try { await connection.end(); } catch (e) {}
@@ -199,5 +260,6 @@ module.exports = {
     matchCategory,
     pushArticle,
     getArticles,
+    getArticleById,
     CATEGORY_MAP
 };

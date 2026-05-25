@@ -175,6 +175,31 @@ function syncSelectedModelToPlugin(provider, modelConfig) {
 }
 
 // POST /api/models/select - 选中的模型，同步到引擎配置
+// ── 切换模型启用/禁用 ─────────────────────────────────
+router.post('/toggle', (req, res) => {
+    try {
+        const { provider } = req.body;
+        if (!provider) return res.status(400).json({ success: false, message: '缺少 provider' });
+        
+        const configPath = path.join(__dirname, '../config/models.json');
+        if (!fs.existsSync(configPath)) {
+            return res.status(404).json({ success: false, message: '模型配置文件不存在' });
+        }
+        
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        if (!config[provider]) {
+            return res.status(404).json({ success: false, message: '模型不存在: ' + provider });
+        }
+        
+        config[provider].enabled = !config[provider].enabled;
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
+        
+        console.log('[Models] ' + provider + ' -> ' + (config[provider].enabled ? '启用' : '禁用'));
+        res.json({ success: true, provider, enabled: config[provider].enabled });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
 router.post('/select', (req, res) => {
     try {
         const { provider } = req.body;

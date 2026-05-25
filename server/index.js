@@ -36,7 +36,8 @@ const publishRoutes = require('./routes/publish');
 const productRoutes = require('./routes/product');
 const styleRoutes = require('./routes/style');
 const chatRoutes = require('./routes/chat');
-const modelsRoutes = require('./routes/models');  // 模型管理路由
+const modelsRoutes = require('./routes/models');
+const assetRoutes = require('./routes/asset');  // 模型管理路由
 const tasksRoutes = require('./routes/tasks');  // 任务管理路由
 const methodologyRoutes = require('./routes/methodology');
 const methodologyPipelineRoutes = require('./routes/methodology-pipeline');
@@ -51,7 +52,8 @@ app.use('/api/publish', publishRoutes);
 app.use('/api/product', productRoutes);
 app.use('/api/style', styleRoutes);
 app.use('/api/chat', chatRoutes);
-app.use('/api/models', modelsRoutes);  // 注册模型管理路由
+app.use('/api/models', modelsRoutes);
+app.use('/api/asset', assetRoutes);  // 素材资源路由  // 注册模型管理路由
 app.use('/api/tasks', tasksRoutes);  // 注册任务管理路由
 app.use('/api/methodology', methodologyRoutes);
 app.use('/api/methodology', methodologyPipelineRoutes);

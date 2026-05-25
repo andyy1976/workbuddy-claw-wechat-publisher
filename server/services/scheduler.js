@@ -2,8 +2,8 @@
  * 定时任务调度器 v2.0
  * - 多语言内容生成
  * - 智能体可调用
- * - 发文章（CMS + 微信草稿箱）
- * - 发邮件（调用 imap-smtp-email skill）
+ * - 发文章(CMS + 微信草稿箱)
+ * - 发邮件(调用 imap-smtp-email skill)
  */
 
 const cron = require('node-cron');
@@ -45,10 +45,10 @@ const LANGUAGE_CONFIG = {
 
 // 写作风格配置
 const STYLE_CONFIG = {
-  'professional': '专业深度风格，信息密度高，适合行业读者',
-  'casual': '轻松口语风格，贴近日常，适合大众传播',
-  'story': '故事叙述风格，引人入胜，适合情感共鸣',
-  'technical': '硬核技术风格，代码示例多，适合开发者'
+  'professional': '专业深度风格,信息密度高,适合行业读者',
+  'casual': '轻松口语风格,贴近日常,适合大众传播',
+  'story': '故事叙述风格,引人入胜,适合情感共鸣',
+  'technical': '硬核技术风格,代码示例多,适合开发者'
 };
 
 let scheduledTasks = [];
@@ -81,7 +81,7 @@ async function saveTasks(data) {
 async function executeTask(task, params = {}) {
   const execId = `${task.id}-${Date.now()}`;
   console.log(`[Scheduler] 开始执行任务: ${task.name} [${execId}]`);
-  
+
   // 记录执行状态
   executionStatus.set(execId, {
     taskId: task.id,
@@ -90,14 +90,14 @@ async function executeTask(task, params = {}) {
     startTime: new Date().toISOString(),
     progress: []
   });
-  
+
   const results = {
     hotContent: null,
     article: null,
     publish: { cms: null, wechat: null, email: null },
     errors: []
   };
-  
+
   const updateProgress = (msg) => {
     const status = executionStatus.get(execId);
     if (status) {
@@ -105,7 +105,7 @@ async function executeTask(task, params = {}) {
       console.log(`[Scheduler][${execId}] ${msg}`);
     }
   };
-  
+
   try {
     // 1. 采集热门内容
     updateProgress('开始采集热门内容');
@@ -114,28 +114,28 @@ async function executeTask(task, params = {}) {
       updateProgress(`采集成功: ${results.hotContent.title || 'N/A'}`);
     } catch (e) {
       results.errors.push({ stage: 'fetch', error: e.message });
-      updateProgress(`采集失败（继续）: ${e.message}`);
+      updateProgress(`采集失败(继续): ${e.message}`);
       results.hotContent = { title: task.keywords[0], summary: '默认内容', url: '' };
     }
-    
-    // 2. AI 生成文章（多语言）
+
+    // 2. AI 生成文章(多语言)
     updateProgress('开始生成文章');
     try {
       results.article = await generateArticle(results.hotContent, task);
       updateProgress(`生成成功: ${results.article.title}`);
     } catch (e) {
       results.errors.push({ stage: 'generate', error: e.message });
-      updateProgress(`生成失败（继续）: ${e.message}`);
+      updateProgress(`生成失败(继续): ${e.message}`);
       const langConfig = LANGUAGE_CONFIG[task.language || 'zh-CN'];
       results.article = {
         title: `【${task.keywords[0]}】最新动态`,
-        content: `${langConfig.greeting}，\n\n本文关于${task.keywords[0]}的详细内容。\n\n${langConfig.signature}`
+        content: `${langConfig.greeting},\n\n本文关于${task.keywords[0]}的详细内容。\n\n${langConfig.signature}`
       };
     }
-    
+
     // 3. 发布到多平台
     const platforms = task.platforms || [];
-    
+
     if (platforms.includes('cms')) {
       updateProgress('发布到 CMS');
       try {
@@ -146,7 +146,7 @@ async function executeTask(task, params = {}) {
         updateProgress(`CMS 发布失败: ${e.message}`);
       }
     }
-    
+
     if (platforms.includes('wechat')) {
       updateProgress('发布到微信草稿箱');
       try {
@@ -157,7 +157,7 @@ async function executeTask(task, params = {}) {
         updateProgress(`微信发布失败: ${e.message}`);
       }
     }
-    
+
     if (platforms.includes('email')) {
       updateProgress('发送邮件');
       try {
@@ -168,7 +168,7 @@ async function executeTask(task, params = {}) {
         updateProgress(`邮件发送失败: ${e.message}`);
       }
     }
-    
+
     // 4. Webhook 回调
     if (task.webhookUrl) {
       updateProgress('触发 Webhook 回调');
@@ -181,7 +181,7 @@ async function executeTask(task, params = {}) {
         updateProgress(`Webhook 回调失败: ${e.message}`);
       }
     }
-    
+
     // 更新执行状态为完成
     const status = executionStatus.get(execId);
     if (status) {
@@ -189,10 +189,10 @@ async function executeTask(task, params = {}) {
       status.endTime = new Date().toISOString();
       status.results = results;
     }
-    
+
     console.log(`[Scheduler] 任务完成: ${task.name} [${execId}]`);
     return { success: results.errors.length === 0, execId, results };
-    
+
   } catch (e) {
     const status = executionStatus.get(execId);
     if (status) {
@@ -209,7 +209,7 @@ async function executeTask(task, params = {}) {
  */
 async function fetchHotContent(keywords, language = 'zh-CN') {
   const scriptPath = path.join(__dirname, '../../scripts/hot-content-fetcher.js');
-  
+
   try {
     const { stdout } = await execAsync(`node "${scriptPath}" "${keywords.join(',')}"`, {
       env: { ...process.env, LANGUAGE: language }
@@ -222,21 +222,26 @@ async function fetchHotContent(keywords, language = 'zh-CN') {
 }
 
 /**
+ * 读取用户配置文件
+ */
+function loadUserConfig() {
+  try {
+    const configPath = path.join(__dirname, '../config/user-config.json');
+    if (fs.existsSync(configPath)) {
+      return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    }
+  } catch (e) {
+    console.warn('[Scheduler] 读取 user-config.json 失败:', e.message);
+  }
+  return {};
+}
+
+/**
  * AI 生成文章（多语言）
  */
 async function generateArticle(hotContent, task) {
   const axios = require('axios');
-  
-  // 读取 .env
-  let env = {};
-  try {
-    const envPath = path.join(__dirname, '../.env');
-    const envContent = await fs.readFile(envPath, 'utf8');
-    envContent.split('\n').forEach(line => {
-      const [key, ...vals] = line.split('=');
-      if (key && vals.length) env[key.trim()] = vals.join('=').trim();
-    });
-  } catch (e) {}
+  const config = loadUserConfig();
   
   const langConfig = LANGUAGE_CONFIG[task.language || 'zh-CN'];
   const styleConfig = STYLE_CONFIG[task.style || 'professional'];
@@ -254,9 +259,12 @@ async function generateArticle(hotContent, task) {
 5. 结尾使用"${langConfig.signature}"
 6. 不要使用 Markdown 格式，直接输出纯文本`;
 
-  // 选择模型
-  const model = task.model || env.AI_MODEL || 'deepseek';
-  const modelConfig = getModelConfig(model, env);
+  // 从 user-config.json 读取 AI 配置
+  const aiConfig = config.ai || {};
+  const model = task.model || aiConfig.provider || 'deepseek';
+  const modelConfig = getModelConfig(model, aiConfig);
+
+  console.log(`[Scheduler] 调用 AI: ${modelConfig.url}, 模型: ${modelConfig.model}`);
   
   const response = await axios.post(modelConfig.url, {
     model: modelConfig.model,
@@ -283,22 +291,22 @@ async function generateArticle(hotContent, task) {
 /**
  * 获取模型配置
  */
-function getModelConfig(model, env) {
+function getModelConfig(model, aiConfig) {
   const configs = {
     'deepseek': {
-      url: 'https://api.deepseek.com/v1/chat/completions',
-      model: 'deepseek-chat',
-      apiKey: env.DEEPSEEK_API_KEY
+      url: (aiConfig.baseUrl || 'https://api.deepseek.com') + '/v1/chat/completions',
+      model: aiConfig.model || 'deepseek-chat',
+      apiKey: aiConfig.apiKey
     },
     'ark-code': {
-      url: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
-      model: env.ARK_MODEL || 'ep-xxxx',
-      apiKey: env.ARK_API_KEY
+      url: aiConfig.arkBaseUrl || 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+      model: aiConfig.arkModel || 'ep-xxxx',
+      apiKey: config.ark?.apiKey || process.env.ARK_API_KEY
     },
     'openai': {
       url: 'https://api.openai.com/v1/chat/completions',
       model: 'gpt-4o-mini',
-      apiKey: env.OPENAI_API_KEY
+      apiKey: config.openai?.apiKey || process.env.OPENAI_API_KEY
     }
   };
   
@@ -309,78 +317,78 @@ function getModelConfig(model, env) {
  * 发布到 CMS
  */
 async function publishToCMS(article, task) {
-  const axios = require('axios');
-  
-  const response = await axios.post('http://localhost:3456/api/cms/publish', {
-    title: article.title,
-    content: article.content,
-    category: 'auto-generated',
-    source: 'workbuddy-scheduler',
-    language: task.language || 'zh-CN'
-  }, { timeout: 30000 });
-  
-  return response.data;
+  const { saveToCMS } = require('./publish-flow');
+
+  const result = await saveToCMS(
+    article.title,
+    article.content,
+    0,  // categoryId, 让系统自动匹配
+    '定时任务'
+  );
+
+  if (!result.success) {
+    throw new Error('CMS保存失败: ' + (result.error || '未知错误'));
+  }
+
+  return result;
 }
 
 /**
  * 发布到微信草稿箱
  */
 async function publishToWechat(article, task) {
-  const scriptPath = 'D:\\.qclaw\\workspace\\wechat-publisher-plugin\\scripts\\multi-platform-publisher.cjs';
-  
-  // 写入临时文件
-  const tempFile = path.join(__dirname, `../temp-article-${Date.now()}.json`);
-  await fs.writeFile(tempFile, JSON.stringify({
+  const { publishFlow } = require('./publish-flow');
+
+  const result = await publishFlow({
     title: article.title,
     content: article.content,
-    digest: article.content.substring(0, 64)
-  }), 'utf8');
-  
-  try {
-    const { stdout } = await execAsync(
-      `node "${scriptPath}" --platform wechat --input "${tempFile}"`,
-      { timeout: 60000 }
-    );
-    return JSON.parse(stdout);
-  } finally {
-    await fs.unlink(tempFile).catch(() => {});
+    categoryId: 0,
+    toCMS: true,
+    toWechat: true,
+    source: '定时任务'
+  });
+
+  if (!result.success) {
+    throw new Error('发布失败: ' + (result.errors || []).join(', '));
   }
+
+  return result;
 }
 
 /**
- * 发送邮件（调用 imap-smtp-email skill）
+ * 发送邮件(调用 imap-smtp-email skill)
  */
 async function sendEmail(article, task) {
   const recipients = task.emailRecipients || [];
   if (recipients.length === 0) return [];
-  
+
   const skillPath = path.join(
     process.env.HOME || process.env.USERPROFILE,
     '.qclaw', 'workspace', 'skills', 'imap-smtp-email'
   );
   const gatewayScript = path.join(skillPath, 'scripts', 'unix', 'email_gateway.sh');
-  
+
   // 构建邮件内容
   const subject = (task.emailSubject || '【自动推送】${title}')
     .replace(/\$\{title\}/g, article.title)
     .replace(/\$\{date\}/g, new Date().toLocaleDateString());
-  
+
   const body = article.content + '\n\n---\n此邮件由 WorkBuddy 自动发送';
-  
+
   const results = [];
-  
+
   for (const to of recipients) {
     try {
       // Windows 下用 PowerShell 调用 bash
       const cmd = `bash "${gatewayScript}" send --to "${to}" --subject "${subject.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"').substring(0, 5000)}"`;
-      
+
       await execAsync(cmd, { timeout: 30000 });
       results.push({ to, success: true });
     } catch (e) {
       results.push({ to, success: false, error: e.message });
     }
   }
-  
+
   return results;
 }
 
@@ -389,24 +397,24 @@ async function sendEmail(article, task) {
  */
 async function startScheduler() {
   const config = await loadTasks();
-  
+
   scheduledTasks.forEach(t => t.task.destroy());
   scheduledTasks = [];
-  
+
   config.tasks.forEach(task => {
     if (!task.enabled) return;
-    
+
     const cronTask = cron.schedule(task.schedule, () => {
       executeTask(task).catch(e => console.error(`[Scheduler] 任务执行失败: ${task.name}`, e));
     }, {
       scheduled: true,
       timezone: 'Asia/Shanghai'
     });
-    
+
     scheduledTasks.push({ id: task.id, name: task.name, task: cronTask });
     console.log(`[Scheduler] 已调度任务: ${task.name}, 计划: ${task.schedule}`);
   });
-  
+
   console.log(`[Scheduler] 共加载 ${scheduledTasks.length} 个定时任务`);
 }
 
@@ -417,7 +425,7 @@ function getExecutionStatus(execId) {
   if (execId) {
     return executionStatus.get(execId);
   }
-  // 返回所有最近的状态（最多 50 条）
+  // 返回所有最近的状态(最多 50 条)
   const all = Array.from(executionStatus.entries());
   return all.slice(-50).map(([id, status]) => ({ execId: id, ...status }));
 }
@@ -427,7 +435,7 @@ function getExecutionStatus(execId) {
  */
 async function addTask(task) {
   const config = await loadTasks();
-  
+
   const newTask = {
     id: Date.now().toString(),
     name: task.name,
@@ -446,11 +454,11 @@ async function addTask(task) {
     webhookUrl: task.webhookUrl,
     tags: task.tags || []
   };
-  
+
   config.tasks.push(newTask);
   await saveTasks(config);
   await startScheduler();
-  
+
   return newTask;
 }
 
@@ -470,13 +478,13 @@ async function deleteTask(taskId) {
 async function updateTask(taskId, updates) {
   const config = await loadTasks();
   const task = config.tasks.find(t => t.id === taskId);
-  
+
   if (task) {
     Object.assign(task, updates);
     await saveTasks(config);
     await startScheduler();
   }
-  
+
   return task;
 }
 
@@ -497,7 +505,7 @@ async function getTask(taskId) {
 }
 
 /**
- * 获取任务执行历史（通过 taskId）
+ * 获取任务执行历史(通过 taskId)
  */
 async function getTaskLogs(taskId) {
   const logs = [];

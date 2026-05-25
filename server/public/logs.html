@@ -382,6 +382,55 @@
           </div>
         </div>
 
+        <!-- CMS文章管理 -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📚 CMS文章管理</span>
+            <button class="btn btn-sm" onclick="loadCMSArticles()">🔄 刷新</button>
+          </div>
+          <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">查看所有CMS文章，可重新发布到微信公众号</p>
+          
+          <!-- 筛选 -->
+          <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+            <select class="form-select" id="cmsFilterStatus" style="width:120px;" onchange="loadCMSArticles()">
+              <option value="">全部状态</option>
+              <option value="1">已发布</option>
+              <option value="0">草稿</option>
+            </select>
+            <input class="form-input" id="cmsSearchTitle" placeholder="搜索标题..." style="width:200px;" onkeyup="if(event.key==='Enter')loadCMSArticles()">
+            <button class="btn btn-sm btn-outline" onclick="loadCMSArticles()">🔍 搜索</button>
+          </div>
+          
+          <!-- 文章列表 -->
+          <div style="max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead style="position:sticky;top:0;background:var(--surface);">
+                <tr style="background:var(--bg);">
+                  <th style="padding:10px;text-align:left;border-bottom:1px solid var(--border);">ID</th>
+                  <th style="padding:10px;text-align:left;border-bottom:1px solid var(--border);">标题</th>
+                  <th style="padding:10px;text-align:left;border-bottom:1px solid var(--border);">状态</th>
+                  <th style="padding:10px;text-align:left;border-bottom:1px solid var(--border);">来源</th>
+                  <th style="padding:10px;text-align:left;border-bottom:1px solid var(--border);">创建时间</th>
+                  <th style="padding:10px;text-align:left;border-bottom:1px solid var(--border);">操作</th>
+                </tr>
+              </thead>
+              <tbody id="cmsArticlesBody">
+                <tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text2);">点击"刷新"加载文章</td></tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- 分页 -->
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
+            <div style="font-size:13px;color:var(--text2);" id="cmsPaginationInfo">共 0 条</div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-sm btn-outline" onclick="changeCMSPage(-1)">上一页</button>
+              <span style="font-size:13px;" id="cmsPageInfo">1 / 1</span>
+              <button class="btn btn-sm btn-outline" onclick="changeCMSPage(1)">下一页</button>
+            </div>
+          </div>
+        </div>
+
         <!-- 质量检查工具 -->
         <div class="card">
           <div class="card-header">
@@ -900,12 +949,172 @@
       document.getElementById('qualityResult').classList.remove('show');
     }
 
+    // ── CMS文章管理 ─────────────────────────────────────
+    var cmsPage = 1;
+    var cmsPageSize = 20;
+    var cmsTotal = 0;
+    
+    async function loadCMSArticles() {
+      try {
+        var params = new URLSearchParams();
+        params.append('page', cmsPage);
+        params.append('pageSize', cmsPageSize);
+        
+        var status = document.getElementById('cmsFilterStatus').value;
+        var keyword = document.getElementById('cmsSearchTitle').value.trim();
+        
+        if (status) params.append('status', status);
+        if (keyword) params.append('keyword', keyword);
+        
+        var r = await fetch(API + '/api/cms/articles?' + params.toString());
+        var d = await r.json();
+        
+        if (d.success) {
+          renderCMSArticles(d.data.list || []);
+          cmsTotal = d.data.pagination?.total || 0;
+          updateCMSPagination();
+        } else {
+          showToast('加载失败: ' + d.message, 'error');
+        }
+      } catch (e) {
+        console.error('[cms] loadCMSArticles error:', e);
+        showToast('加载失败: ' + e.message, 'error');
+      }
+    }
+    
+    function renderCMSArticles(articles) {
+      var tbody = document.getElementById('cmsArticlesBody');
+      
+      if (!articles.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text2);">暂无文章</td></tr>';
+        return;
+      }
+      
+      var html = '';
+      articles.forEach(function(art) {
+        var statusName = art.status == 1 ? '<span style="color:#10b981;">已发布</span>' : '<span style="color:#f59e0b;">草稿</span>';
+        var createdAt = art.created_at ? new Date(art.created_at).toLocaleString('zh-CN') : '-';
+        
+        html += '<tr>' +
+          '<td>' + art.aid + '</td>' +
+          '<td title="' + (art.title || '') + '">' + (art.title || '-').substring(0, 25) + (art.title && art.title.length > 25 ? '...' : '') + '</td>' +
+          '<td>' + statusName + '</td>' +
+          '<td>' + (art.source || 'WorkBuddy') + '</td>' +
+          '<td>' + createdAt + '</td>' +
+          '<td style="white-space:nowrap;">' +
+            '<button class="btn btn-sm" style="margin-right:4px;" onclick="viewCMSArticle(' + art.aid + ')">查看</button>' +
+            '<button class="btn btn-sm btn-success" style="margin-right:4px;" onclick="republishCMSArticle(' + art.aid + ')">重新发布</button>' +
+            '<button class="btn btn-sm btn-outline" onclick="deleteCMSArticle(' + art.aid + ')">删除</button>' +
+          '</td>' +
+        '</tr>';
+      });
+      
+      tbody.innerHTML = html;
+    }
+    
+    function updateCMSPagination() {
+      var totalPages = Math.ceil(cmsTotal / cmsPageSize) || 1;
+      document.getElementById('cmsPaginationInfo').textContent = '共 ' + cmsTotal + ' 条';
+      document.getElementById('cmsPageInfo').textContent = cmsPage + ' / ' + totalPages;
+    }
+    
+    function changeCMSPage(delta) {
+      var totalPages = Math.ceil(cmsTotal / cmsPageSize) || 1;
+      var newPage = cmsPage + delta;
+      if (newPage >= 1 && newPage <= totalPages) {
+        cmsPage = newPage;
+        loadCMSArticles();
+      }
+    }
+    
+    async function viewCMSArticle(aid) {
+      try {
+        var r = await fetch(API + '/api/cms/articles?id=' + aid);
+        var d = await r.json();
+        if (d.success && d.data) {
+          var content = d.data.content || '';
+          var previewWin = window.open('', '_blank');
+          previewWin.document.write('<html><head><title>' + (d.data.title || '') + '</title></head><body style="padding:20px;max-width:800px;margin:0 auto;line-height:1.8;"><h1>' + (d.data.title || '') + '</h1><hr/><div>' + content + '</div></body></html>');
+          previewWin.document.close();
+        } else {
+          showToast('获取失败: ' + d.message, 'error');
+        }
+      } catch (e) {
+        showToast('获取失败: ' + e.message, 'error');
+      }
+    }
+    
+    async function republishCMSArticle(aid) {
+      if (!confirm('确认重新发布这篇 文章到微信公众号？')) return;
+      
+      try {
+        // 先获取文章内容
+        var r = await fetch(API + '/api/cms/articles?id=' + aid);
+        var d = await r.json();
+        
+        if (!d.success || !d.data) {
+          return showToast('获取文章失败: ' + d.message, 'error');
+        }
+        
+        var article = d.data;
+        var publishBtn = event.target;
+        publishBtn.disabled = true;
+        publishBtn.textContent = '发布中...';
+        
+        // 调用发布API（独立于大模型）
+        var pubR = await fetch(API + '/api/content/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: article.title,
+            content: article.content,
+            toCMS: true,
+            toWechat: true,
+            source: '重新发布'
+          })
+        });
+        var pubD = await pubR.json();
+        
+        if (pubD.success) {
+          showToast('发布成功! CMS:' + (pubD.cms?.success ? 'OK' : 'FAIL') + ', 微信:' + (pubD.wechat?.success ? 'OK' : 'FAIL'));
+        } else {
+          showToast('发布失败: ' + (pubD.errors?.join(', ') || '未知错误'), 'error');
+        }
+        
+        publishBtn.disabled = false;
+        publishBtn.textContent = '重新发布';
+      } catch (e) {
+        showToast('发布失败: ' + e.message, 'error');
+        event.target.disabled = false;
+        event.target.textContent = '重新发布';
+      }
+    }
+    
+    async function deleteCMSArticle(aid) {
+      if (!confirm('确认删除这篇 文章？此操作不可恢复！')) return;
+      
+      try {
+        var r = await fetch(API + '/api/cms/articles?id=' + aid, { method: 'DELETE' });
+        var d = await r.json();
+        
+        if (d.success) {
+          showToast('删除成功');
+          loadCMSArticles();
+        } else {
+          showToast('删除失败: ' + d.message, 'error');
+        }
+      } catch (e) {
+        showToast('删除失败: ' + e.message, 'error');
+      }
+    }
+
     // ── 初始化 ─────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function() {
       loadNavigation();
       checkHealth();
       loadOverview();
       loadLogs();
+      loadCMSArticles();
     });
   </script>
 </body>

@@ -12,13 +12,12 @@
   },
   "volcengine": {
     "name": "火山引擎",
-    "url": "https://ark.cn-beijing.volces.com/api/coding/v3",
+    "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
     "key": "46bbb2c6-4ed0-4893-8b05-83179c41e83b",
     "model": "ark-code-latest",
     "enabled": true,
     "priority": 2,
     "description": "火山方舟 Ark - 编程模型，备用首选",
-    "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
     "selected": false
   },
   "openai": {

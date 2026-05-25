@@ -24,11 +24,26 @@ router.get('/categories', async (req, res) => {
 // ── 获取文章 ─────────────────────────────────────
 router.get('/articles', async (req, res) => {
     try {
-        const { categoryId, page, pageSize } = req.query;
+        // 支持单个文章查询
+        const { id, categoryId, page, pageSize, status, keyword } = req.query;
+        
+        // 单个文章查询
+        if (id) {
+            const article = await cms.getArticleById(parseInt(id));
+            if (article) {
+                return res.json({ success: true, data: article });
+            } else {
+                return res.json({ success: false, message: '文章不存在' });
+            }
+        }
+        
+        // 列表查询
         const result = await cms.getArticles({
             categoryId: categoryId ? parseInt(categoryId) : null,
             page: page ? parseInt(page) : 1,
-            pageSize: pageSize ? parseInt(pageSize) : 20
+            pageSize: pageSize ? parseInt(pageSize) : 20,
+            status: status ? parseInt(status) : null,
+            keyword: keyword || null
         });
         res.json(result);
     } catch (e) {

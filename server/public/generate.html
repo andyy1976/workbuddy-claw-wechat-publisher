@@ -143,7 +143,30 @@
                 localStorage.setItem('generatedContent', d.data.content);
                 localStorage.setItem('generatedTitles', d.data.titles);
                 localStorage.setItem('generatedMeta', JSON.stringify(d.data.metadata));
-                showToast('内容生成成功!');
+                
+                // ✅ 自动保存到CMS（不依赖大模型的发布层）
+                const title = d.data.titles.split('\n')[0] || document.getElementById('genTopic').value;
+                try {
+                    const saveR = await fetch('/api/content/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: title,
+                            content: d.data.content,
+                            source: 'AI生成'
+                        })
+                    });
+                    const saveD = await saveR.json();
+                    if (saveD.success) {
+                        localStorage.setItem('lastSavedAid', saveD.data.aid);
+                        showToast('内容生成成功! 已自动保存到CMS (ID:' + saveD.data.aid + ')');
+                    } else {
+                        showToast('内容生成成功! 但CMS保存失败: ' + saveD.message);
+                    }
+                } catch (saveErr) {
+                    console.error('CMS保存失败:', saveErr);
+                    showToast('内容生成成功! 但CMS保存异常');
+                }
             } else { showToast(d.message || '生成失败', 'error'); }
         } catch (e) { showToast('请求失败: ' + e.message, 'error'); }
         finally { btn.disabled = false; document.getElementById('genLoading').style.display = 'none'; }

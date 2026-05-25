@@ -71,7 +71,7 @@ router.get('/publish-logs', async (req, res) => {
         const [countResult] = await pool.execute(countQuery, queryParams);
         const total = countResult[0].total;
 
-        // 查询列表
+        // 查询列表（用 query() 而非 execute()，避免 mysql2 prepared statement LIMIT/OFFSET 兼容性问题）
         const listQuery = `
             SELECT
                 cpl.id,
@@ -87,9 +87,9 @@ router.get('/publish-logs', async (req, res) => {
             LEFT JOIN lvbo_article la ON cpl.content_id = la.aid
             ${whereClause}
             ORDER BY cpl.created_at DESC
-            LIMIT ? OFFSET ?
+            LIMIT ${limit} OFFSET ${offset}
         `;
-        const [rows] = await pool.execute(listQuery, [...queryParams, limit, offset]);
+        const [rows] = await pool.query(listQuery);
 
         res.json({
             success: true,

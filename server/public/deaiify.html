@@ -116,19 +116,37 @@
       const text = document.getElementById('deaiOutput').textContent;
       if (!text || text === '优化结果将显示在这里...') return showToast('没有可发送的内容', 'error');
 
+      // 保存标题
+      const savedTitle = localStorage.getItem('deaiifyTitle') || '去AI味文章';
       localStorage.setItem('publishContent', text);
+      localStorage.setItem('publishTitle', savedTitle);
+      localStorage.removeItem('deaiifyTitle');
 
-      const savedTitle = localStorage.getItem('deaiifyTitle');
-      if (savedTitle) {
-        localStorage.setItem('publishTitle', savedTitle);
-        localStorage.removeItem('deaiifyTitle');
-      }
-
-      // sessionStorage 防止刷新丢失
-      if (savedTitle) { try { sessionStorage.setItem('lastPubTitle', savedTitle); } catch(e) {} }
-
-      showToast('已保存到发布页面，自动跳转中...', 'success');
-      setTimeout(() => { location.href = '/publish.html'; }, 500);
+      // ✅ 自动保存到CMS（不依赖大模型的发布层）
+      (async () => {
+        try {
+          const saveR = await fetch('/api/content/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: savedTitle,
+              content: text,
+              source: '去AI味'
+            })
+          });
+          const saveD = await saveR.json();
+          if (saveD.success) {
+            showToast('已自动保存到CMS (ID:' + saveD.data.aid + ')，跳转发布页...', 'success');
+          } else {
+            showToast('CMS保存失败，但可继续发布', 'error');
+          }
+        } catch (saveErr) {
+          console.error('CMS保存失败:', saveErr);
+          showToast('CMS保存异常，但可继续发布', 'error');
+        }
+        
+        setTimeout(() => { location.href = '/publish.html'; }, 800);
+      })();
     }
 
     async function deaiifyContent() {
