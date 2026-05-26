@@ -36,7 +36,7 @@ function showToast(msg, type = 'success') {
 // ── Health ─────────────────────────────────
 async function checkHealth() {
     try {
-        const r = await fetch(API + '/api/health');
+        const r = await fetch('/api/health');
         const d = await r.json();
         const el = document.getElementById('serverStatus');
         if (el) el.textContent = d.status === 'ok' ? '运行中' : '异常';

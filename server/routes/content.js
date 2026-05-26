@@ -214,4 +214,72 @@ router.post('/publish', async (req, res) => {
     }
 });
 
+// ── 内容列表（最近文章） ──────────────────────
+router.get('/list', async (req, res) => {
+    try {
+        const { page = 1, pageSize = 20, keyword } = req.query;
+        const mysql = require('mysql2/promise');
+        const pool = mysql.createPool({
+            host: process.env.DB_HOST || '82.156.40.94',
+            user: process.env.DB_USER || 'eastaiai',
+            password: process.env.DB_PASSWORD || 'alibaba',
+            database: process.env.DB_NAME || 'eastaiai',
+            charset: 'utf8mb4'
+        });
+        const offset = (parseInt(page) - 1) * parseInt(pageSize);
+        const limit = parseInt(pageSize);
+        let where = '';
+        const params = [];
+        if (keyword) { where = 'WHERE title LIKE ?'; params.push(`%${keyword}%`); }
+        const [rows] = await pool.query(
+            `SELECT aid as id, title, author, addtime as createdAt FROM lvbo_article ${where} ORDER BY aid DESC LIMIT ${limit} OFFSET ${offset}`,
+            params
+        );
+        const [countRows] = await pool.execute(`SELECT COUNT(*) as total FROM lvbo_article ${where}`, params);
+        await pool.end();
+        res.json({
+            success: true,
+            data: {
+                list: rows,
+                pagination: { page: parseInt(page), pageSize: limit, total: countRows[0].total }
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// ── 最近文章 ──────────────────────────────────────
+router.get('/recent', async (req, res) => {
+    try {
+        const { limit = 10 } = req.query;
+        const mysql = require('mysql2/promise');
+        const pool = mysql.createPool({
+            host: process.env.DB_HOST || '82.156.40.94',
+            user: process.env.DB_USER || 'eastaiai',
+            password: process.env.DB_PASSWORD || 'alibaba',
+            database: process.env.DB_NAME || 'eastaiai',
+            charset: 'utf8mb4'
+        });
+        const [rows] = await pool.query(
+            `SELECT aid as id, title, addtime as createdAt FROM lvbo_article ORDER BY aid DESC LIMIT ${parseInt(limit)}`
+        );
+        await pool.end();
+        res.json({ success: true, data: rows });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// ── 内容风格列表 ──────────────────────────────────
+router.get('/styles', (req, res) => {
+    const styles = [
+        { id: 'professional', name: '专业风格', desc: '行业白皮书面貌，数据和案例密集' },
+        { id: 'khazix', name: '卡兹克风格', desc: '第一人称视角，科技圈野区猎手' },
+        { id: 'casual', name: '轻松风格', desc: '口语化表达，贴近读者' },
+        { id: 'technical', name: '技术风格', desc: '技术深度分析，适合工程师阅读' }
+    ];
+    res.json({ success: true, data: styles });
+});
+
 module.exports = router;

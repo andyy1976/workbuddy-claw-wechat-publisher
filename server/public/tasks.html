@@ -283,11 +283,41 @@
             }
         }
 
+        let currentExecId = null;  // 当前正在执行的execId，用于过滤日志显示
+
         async function runTask(id) {
             try {
                 const r = await fetch(`${API}/${id}/run`, { method: 'POST' });
                 const d = await r.json();
-                showToast(d.success ? '✅ 任务已触发执行' : '执行失败: ' + d.message, d.success ? 'success' : 'error');
+                if (!d.success) {
+                    showToast('执行失败: ' + d.message, 'error');
+                    return;
+                }
+                // 获取本次执行的 execId
+                currentExecId = d.execId || null;
+                showToast('⏳ 任务正在执行，请查看日志...', 'success');
+                // 自动打开日志窗口并轮询（只显示当次）
+                viewLogs(id, true);
+                // 每3秒刷新日志，直到完成或超时(2分钟)
+                let polls = 0;
+                const pollTimer = setInterval(async () => {
+                    polls++;
+                    if (polls > 40) { clearInterval(pollTimer); currentExecId = null; return; }
+                    await viewLogs(id, true);
+                    // 检查最新记录是否已完成
+                    try {
+                        const lr = await fetch(`${API}/${id}/logs`);
+                        const ld = await lr.json();
+                        if (ld.success && ld.data && ld.data.length > 0) {
+                            const latest = ld.data[0];
+                            if (latest.status === 'completed' || latest.status === 'failed') {
+                                clearInterval(pollTimer);
+                                currentExecId = null;
+                                showToast(latest.status === 'completed' ? '✅ 任务执行完毕！' : '❌ 任务执行失败', latest.status === 'completed' ? 'success' : 'error');
+                            }
+                        }
+                    } catch(e) {}
+                }, 3000);
             } catch (e) {
                 showToast('请求失败: ' + e.message, 'error');
             }
@@ -309,13 +339,18 @@
             }
         }
 
-        // 查看任务执行日志
-        async function viewLogs(id) {
+        // 查看任务执行日志（onlyLatest=true 时只显示最近一次）
+        async function viewLogs(id, onlyLatest = false) {
             try {
                 const r = await fetch(`${API}/${id}/logs`);
                 const d = await r.json();
                 if (d.success && d.data) {
-                    displayLogs(id, d.data);
+                    let logsToShow = d.data;
+                    if (onlyLatest && logsToShow.length > 0) {
+                        // 只显示最新的那次执行记录
+                        logsToShow = [logsToShow[0]];
+                    }
+                    displayLogs(id, logsToShow, onlyLatest);
                 } else {
                     showToast('获取日志失败: ' + (d.message || '未知错误'), 'error');
                 }
@@ -325,11 +360,11 @@
         }
 
         // 显示日志
-        function displayLogs(taskId, logs) {
+        function displayLogs(taskId, logs, isLiveView = false) {
             const title = document.getElementById('logsModalTitle');
             const content = document.getElementById('logsContent');
             
-            title.textContent = `任务执行日志 (${taskId})`;
+            title.textContent = isLiveView ? `🔴 实时执行中 - ${taskId}` : `任务执行日志 (${taskId})`;
             
             if (!logs || logs.length === 0) {
                 content.innerHTML = '<div style="color:var(--text2);text-align:center;padding:20px;">暂无执行记录</div>';

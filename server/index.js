@@ -44,6 +44,8 @@ const methodologyPipelineRoutes = require('./routes/methodology-pipeline');
 const skillsRoutes = require('./routes/skills');
 const statsRoutes = require('./routes/stats');
 const logsRoutes = require('./routes/logs');
+const { router: authRoutes, authMiddleware } = require('./routes/auth');
+const userSettingsRoutes = require('./routes/user-settings');
 const scheduler = require('./services/scheduler');
 
 app.use('/api/content', contentRoutes);
@@ -60,6 +62,9 @@ app.use('/api/methodology', methodologyPipelineRoutes);
 app.use('/api/skills', skillsRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/logs', logsRoutes);
+
+app.use('/api/auth', authRoutes);
+app.use('/api/user-settings', userSettingsRoutes);
 
 // ── 健康检查 ──────────────────────────────────────
 app.get('/api/health', (req, res) => {

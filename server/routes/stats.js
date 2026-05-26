@@ -465,3 +465,72 @@ router.post('/quality-check', (req, res) => {
 });
 
 module.exports = router;
+
+// 补充路由：发布趋势
+router.get('/trends', async (req, res) => {
+    try {
+        const { days = 30 } = req.query;
+        const daysAgo = new Date();
+        daysAgo.setDate(daysAgo.getDate() - parseInt(days));
+        const since = daysAgo.toISOString().split('T')[0];
+
+        const [rows] = await pool.execute(`
+            SELECT DATE(created_at) as date,
+                   platform,
+                   status,
+                   COUNT(*) as count
+            FROM content_publish_log
+            WHERE created_at >= ?
+            GROUP BY DATE(created_at), platform, status
+            ORDER BY date ASC
+        `, [since]);
+
+        // 按日期聚合
+        const trendMap = {};
+        rows.forEach(r => {
+            const d = r.date.toISOString ? r.date.toISOString().split('T')[0] : String(r.date);
+            if (!trendMap[d]) trendMap[d] = { date: d, total: 0, success: 0, failed: 0, byPlatform: {} };
+            trendMap[d].total += r.count;
+            if (r.status === 'success') trendMap[d].success += r.count;
+            if (r.status === 'failed') trendMap[d].failed += r.count;
+            trendMap[d].byPlatform[r.platform] = (trendMap[d].byPlatform[r.platform] || 0) + r.count;
+        });
+
+        res.json({ success: true, data: Object.values(trendMap) });
+    } catch (e) {
+        console.error('获取趋势失败:', e);
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// 补充路由：每日统计
+router.get('/daily', async (req, res) => {
+    try {
+        const { date } = req.query;
+        const targetDate = date || new Date().toISOString().split('T')[0];
+
+        const [rows] = await pool.execute(`
+            SELECT platform, status, COUNT(*) as count
+            FROM content_publish_log
+            WHERE DATE(created_at) = ?
+            GROUP BY platform, status
+        `, [targetDate]);
+
+        const [articleCount] = await pool.execute(
+            'SELECT COUNT(*) as count FROM lvbo_article WHERE DATE(addtime) = ?',
+            [targetDate]
+        );
+
+        res.json({
+            success: true,
+            data: {
+                date: targetDate,
+                articles: articleCount[0].count,
+                publishDetails: rows
+            }
+        });
+    } catch (e) {
+        console.error('获取每日统计失败:', e);
+        res.status(500).json({ success: false, message: e.message });
+    }
+});

@@ -7,7 +7,8 @@
  */
 
 const cron = require('node-cron');
-const fs = require('fs').promises;
+const fs = require('fs');
+const fsPromises = require('fs').promises;
 const path = require('path');
 const { exec } = require('child_process');
 const { promisify } = require('util');
@@ -59,7 +60,7 @@ let executionStatus = new Map(); // 存储任务执行状态
  */
 async function loadTasks() {
   try {
-    const data = await fs.readFile(TASKS_FILE, 'utf8');
+    const data = await fsPromises.readFile(TASKS_FILE, 'utf8');
     return JSON.parse(data);
   } catch (e) {
     const defaultTasks = { tasks: [], lastRun: null };
@@ -72,7 +73,7 @@ async function loadTasks() {
  * 保存任务配置
  */
 async function saveTasks(data) {
-  await fs.writeFile(TASKS_FILE, JSON.stringify(data, null, 2), 'utf8');
+  await fsPromises.writeFile(TASKS_FILE, JSON.stringify(data, null, 2), 'utf8');
 }
 
 /**
@@ -225,15 +226,70 @@ async function fetchHotContent(keywords, language = 'zh-CN') {
  * 读取用户配置文件
  */
 function loadUserConfig() {
-  try {
-    const configPath = path.join(__dirname, '../config/user-config.json');
-    if (fs.existsSync(configPath)) {
-      return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  // 候选路径：优先项目根目录，再试运行路径
+  const candidates = [
+    path.join(__dirname, '../../config/user-config.json'),   // server/services -> 项目根目录
+    path.join(__dirname, '../config/user-config.json'),      // server -> config（兼容旧路径）
+    path.join(process.cwd(), 'config/user-config.json'),     // cwd
+  ];
+  for (const configPath of candidates) {
+    try {
+      if (fs.existsSync(configPath)) {
+        const raw = fs.readFileSync(configPath, 'utf8');
+        const config = JSON.parse(raw);
+        console.log(`[Scheduler] ✅ user-config 已加载: ${configPath}`);
+        return config;
+      }
+    } catch (e) {
+      console.warn(`[Scheduler] 读取失败 ${configPath}:`, e.message);
     }
-  } catch (e) {
-    console.warn('[Scheduler] 读取 user-config.json 失败:', e.message);
   }
+  console.warn('[Scheduler] ⚠️ 未找到 user-config.json，使用默认配置');
   return {};
+}
+
+/**
+ * 从 models.json 加载模型配置（Web UI 模型配置页面的数据源）
+ */
+function loadModelsConfig() {
+  const candidates = [
+    path.join(__dirname, '../config/models.json'),     // server/config/models.json
+    path.join(__dirname, '../../server/config/models.json'), // 项目根目录
+    path.join(process.cwd(), 'server/config/models.json'),
+  ];
+  for (const configPath of candidates) {
+    try {
+      if (fs.existsSync(configPath)) {
+        const raw = fs.readFileSync(configPath, 'utf8');
+        const models = JSON.parse(raw);
+        console.log(`[Scheduler] ✅ models.json 已加载: ${configPath}`);
+        return models;
+      }
+    } catch (e) {
+      console.warn(`[Scheduler] 读取 models.json 失败 ${configPath}:`, e.message);
+    }
+  }
+  console.warn('[Scheduler] ⚠️ 未找到 models.json');
+  return null;
+}
+
+/**
+ * 获取当前选中的模型配置（优先从 models.json，回退到 user-config）
+ */
+function getActiveModelConfig() {
+  const models = loadModelsConfig();
+  if (models && models._selected && models[models._selected]) {
+    const m = models[models._selected];
+    if (m.enabled && m.key) {
+      console.log(`[Scheduler] 使用模型: ${m.name} (${m.model}), URL: ${m.url}`);
+      return { url: m.url, model: m.model, apiKey: m.key };
+    }
+  }
+  // 回退到 user-config
+  const uc = loadUserConfig();
+  const ai = uc.ai || {};
+  console.log(`[Scheduler] 回退 user-config: ${ai.provider}/${ai.model}`);
+  return { url: (ai.baseUrl || 'https://api.deepseek.com') + '/v1/chat/completions', model: ai.model || 'deepseek-chat', apiKey: ai.apiKey };
 }
 
 /**
@@ -243,26 +299,81 @@ async function generateArticle(hotContent, task) {
   const axios = require('axios');
   const config = loadUserConfig();
   
-  const langConfig = LANGUAGE_CONFIG[task.language || 'zh-CN'];
-  const styleConfig = STYLE_CONFIG[task.style || 'professional'];
+  // 从用户设置读取关键词和方法论偏好
+  let userKw = null, userMethod = null;
+  try {
+    const mysql = require('mysql2/promise');
+    const conn = await mysql.createConnection({
+      host: process.env.DB_HOST || '82.156.40.94', user: process.env.DB_USER || 'eastaiai',
+      password: process.env.DB_PASSWORD || 'alibaba', database: process.env.DB_NAME || 'eastaiai',
+      port: parseInt(process.env.DB_PORT) || 3306, connectTimeout: 30000, ssl: false
+    });
+    const [rows] = await conn.execute(
+      `SELECT us.setting_key, us.setting_value FROM user_settings us JOIN users u ON us.user_id = u.id WHERE u.role = 'admin' AND us.setting_key IN ('keywords','methodology')`
+    );
+    for (const row of rows) {
+      const val = typeof row.setting_value === 'string' ? JSON.parse(row.setting_value) : row.setting_value;
+      if (row.setting_key === 'keywords') userKw = val;
+      if (row.setting_key === 'methodology') userMethod = val;
+    }
+    await conn.end();
+  } catch (e) {
+    console.warn('[Scheduler] 读取用户关键词/方法论设置失败:', e.message);
+  }
+
+  // 合并关键词：用户设置 + 任务配置
+  const keywords = [...(userKw?.list || []), ...(task.keywords || [])];
+  const uniqueKw = [...new Set(keywords)];
+  
+  const langConfig = LANGUAGE_CONFIG[task.language || userKw?.language || 'zh-CN'];
+  const styleKey = task.style || userKw?.style || 'professional';
+  const styleConfig = STYLE_CONFIG[styleKey] || STYLE_CONFIG['professional'];
+  
+  // 方法论指令
+  let methodPrompt = '';
+  if (userMethod) {
+    const methods = [];
+    if (userMethod.threeIronRules) methods.push('遵循三条铁律：时间真实、角度陌生化、人称诚意');
+    if (userMethod.emotionArc) methods.push('使用情绪曲线结构');
+    if (userMethod.angleStranger) methods.push('角度陌生化：逆向思考/角色转换');
+    if (userMethod.redGreenCard) methods.push('红绿牌分析：风险与机遇并存');
+    if (userMethod.storyAnalyze) methods.push('故事拆解手法');
+    if (userMethod.valueFilter) methods.push('价值过滤：只保留核心价值');
+    if (userMethod.mediciCollision) methods.push('美第奇碰撞：跨领域交叉');
+    if (userMethod.dataPredict) methods.push('数据驱动预测');
+    if (methods.length) methodPrompt = `\n方法论要求：${methods.join('；')}。`;
+    
+    // 人称偏好
+    const personMap = { you: '优先用"你"作主语', we: '用"我们"作主语', third: '用第三人称', first: '用第一人称"我"' };
+    if (userMethod.person && personMap[userMethod.person]) {
+      methodPrompt += ` ${personMap[userMethod.person]}。`;
+    }
+    // 结构偏好
+    const structMap = { story: '故事化叙事', list: '清单式结构', analysis: '深度分析结构', contrast: '对比评测结构' };
+    if (userMethod.structure && structMap[userMethod.structure]) {
+      methodPrompt += ` 采用${structMap[userMethod.structure]}。`;
+    }
+  }
   
   const prompt = `${langConfig.promptPrefix}一篇${styleConfig}的公众号文章：
 
-关键词：${task.keywords.join(', ')}
+关键词：${uniqueKw.join(', ')}
 热门内容：${JSON.stringify(hotContent)}
+${methodPrompt}
+【输出格式要求】（必须严格遵守，否则无效）：
+第一行必须是文章标题，格式为「标题：xxx」（不要加任何Markdown符号）
+第二行空行
+第三行开始是正文，正文开头使用"${langConfig.greeting}"
+正文结尾使用"${langConfig.signature}"
+⚠️ 注意：绝对不要把问候语当成标题，标题必须是有实质内容的文章标题
+其他要求：
+- 标题吸引人，符合${langConfig.name}阅读习惯
+- 内容有价值，信息密度高
+- 长度 800-1200 字
+- 不要使用 Markdown 格式，直接输出纯文本`;
 
-要求：
-1. 标题吸引人，符合${langConfig.name}阅读习惯
-2. 内容有价值，信息密度高
-3. 长度 800-1200 字
-4. 开头使用"${langConfig.greeting}"
-5. 结尾使用"${langConfig.signature}"
-6. 不要使用 Markdown 格式，直接输出纯文本`;
-
-  // 从 user-config.json 读取 AI 配置
-  const aiConfig = config.ai || {};
-  const model = task.model || aiConfig.provider || 'deepseek';
-  const modelConfig = getModelConfig(model, aiConfig);
+  // 从 models.json 读取当前选中模型配置（优先）
+  const modelConfig = getActiveModelConfig();
 
   console.log(`[Scheduler] 调用 AI: ${modelConfig.url}, 模型: ${modelConfig.model}`);
   
@@ -282,10 +393,25 @@ async function generateArticle(hotContent, task) {
   const fullContent = response.data.choices[0].message.content;
   const lines = fullContent.split('\n').filter(l => l.trim());
   
-  return {
-    title: lines[0].replace(/^#+\s*/, '').substring(0, 50),
-    content: fullContent
-  };
+  // 智能提取标题：找「标题：」或「Title:」开头的行，否则取第一个非问候语的非空行
+  let title = '';
+  for (const line of lines) {
+    const t = line.trim();
+    if (t.match(/^(标题|Title)[\s:：]/)) {
+      title = t.replace(/^(标题|Title)[\s:：]+/, '').substring(0, 60);
+      break;
+    }
+    if (t && !t.match(/^(Dear Reader|你好|您好|Hello|Hi|各位读者|亲爱的|Hey)/i) && t.length > 5 && t.length < 80 && !t.match(/^[。！？.!?]$/)) {
+      title = t.substring(0, 60);
+      break;
+    }
+  }
+  if (!title || title.match(/^(Dear Reader|你好|您好|Hello|Hi|各位读者|亲爱的|Hey)[，。！？.!?]?$/i)) {
+    // 标题提取失败或仍是问候语 → 用关键词组合生成
+    title = `【${uniqueKw[0] || '热点'}】${new Date().toLocaleDateString('zh-CN', {month:'long', day:'numeric'})}最新动态`;
+  }
+  
+  return { title, content: fullContent };
 }
 
 /**
@@ -301,12 +427,12 @@ function getModelConfig(model, aiConfig) {
     'ark-code': {
       url: aiConfig.arkBaseUrl || 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
       model: aiConfig.arkModel || 'ep-xxxx',
-      apiKey: config.ark?.apiKey || process.env.ARK_API_KEY
+      apiKey: aiConfig.arkApiKey
     },
     'openai': {
       url: 'https://api.openai.com/v1/chat/completions',
       model: 'gpt-4o-mini',
-      apiKey: config.openai?.apiKey || process.env.OPENAI_API_KEY
+      apiKey: aiConfig.openaiApiKey
     }
   };
   
@@ -343,7 +469,7 @@ async function publishToWechat(article, task) {
     title: article.title,
     content: article.content,
     categoryId: 0,
-    toCMS: true,
+    toCMS: false,  // CMS已在publishToCMS()中写入，避免重复
     toWechat: true,
     source: '定时任务'
   });
@@ -356,33 +482,98 @@ async function publishToWechat(article, task) {
 }
 
 /**
- * 发送邮件(调用 imap-smtp-email skill)
+ * 发送邮件（使用 nodemailer，从用户设置读取收件人）
  */
 async function sendEmail(article, task) {
-  const recipients = task.emailRecipients || [];
-  if (recipients.length === 0) return [];
+  // 优先从用户设置读取收件人，回退到 task 配置
+  let recipients = task.emailRecipients || [];
+  let subjectTemplate = task.emailSubject || '【WorkBuddy】${title} - ${date}';
+  let trigger = 'onPublish';
 
-  const skillPath = path.join(
-    process.env.HOME || process.env.USERPROFILE,
-    '.qclaw', 'workspace', 'skills', 'imap-smtp-email'
-  );
-  const gatewayScript = path.join(skillPath, 'scripts', 'unix', 'email_gateway.sh');
+  try {
+    const mysql = require('mysql2/promise');
+    const conn = await mysql.createConnection({
+      host: process.env.DB_HOST || '82.156.40.94',
+      user: process.env.DB_USER || 'eastaiai',
+      password: process.env.DB_PASSWORD || 'alibaba',
+      database: process.env.DB_NAME || 'eastaiai',
+      port: parseInt(process.env.DB_PORT) || 3306,
+      connectTimeout: 30000, ssl: false
+    });
 
-  // 构建邮件内容
-  const subject = (task.emailSubject || '【自动推送】${title}')
+    // 查找管理员用户的邮箱设置（第一个 admin 用户）
+    const [users] = await conn.execute(
+      `SELECT us.setting_value FROM user_settings us JOIN users u ON us.user_id = u.id WHERE u.role = 'admin' AND us.setting_key = 'email' LIMIT 1`
+    );
+    if (users.length > 0) {
+      const emailSetting = typeof users[0].setting_value === 'string' ? JSON.parse(users[0].setting_value) : users[0].setting_value;
+      if (emailSetting.recipients && emailSetting.recipients.length > 0) {
+        recipients = emailSetting.recipients;
+        console.log(`[Scheduler] 从用户设置读取邮箱收件人: ${recipients.join(', ')}`);
+      }
+      if (emailSetting.subject) subjectTemplate = emailSetting.subject;
+      if (emailSetting.trigger) trigger = emailSetting.trigger;
+    }
+    await conn.end();
+  } catch (e) {
+    console.warn(`[Scheduler] 读取用户邮箱设置失败，使用任务配置: ${e.message}`);
+  }
+
+  // 检查发送时机
+  if (trigger === 'never') {
+    console.log('[Scheduler] 邮件通知已关闭');
+    return [];
+  }
+
+  if (recipients.length === 0) {
+    console.log('[Scheduler] 无邮件收件人，跳过发送');
+    return [];
+  }
+
+  // 使用 nodemailer 发送
+  const nodemailer = require('nodemailer');
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = parseInt(process.env.SMTP_PORT) || 465;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  const smtpFromName = process.env.SMTP_FROM_NAME || 'WorkBuddy';
+  const smtpFromAddr = process.env.SMTP_FROM_ADDRESS || smtpUser;
+
+  if (!smtpHost || !smtpUser || !smtpPass) {
+    console.warn('[Scheduler] SMTP 未配置，无法发送邮件。请在 .env 设置 SMTP_HOST/USER/PASS');
+    return recipients.map(to => ({ to, success: false, error: 'SMTP not configured' }));
+  }
+
+  const subject = subjectTemplate
     .replace(/\$\{title\}/g, article.title)
-    .replace(/\$\{date\}/g, new Date().toLocaleDateString());
+    .replace(/\$\{date\}/g, new Date().toLocaleDateString())
+    .replace(/\$\{category\}/g, '');
 
-  const body = article.content + '\n\n---\n此邮件由 WorkBuddy 自动发送';
+  let transporter;
+  try {
+    transporter = nodemailer.createTransport({
+      host: smtpHost, port: smtpPort, secure: smtpPort === 465,
+      auth: { user: smtpUser, pass: smtpPass }
+    });
+  } catch (e) {
+    console.error('[Scheduler] 创建邮件传输失败:', e.message);
+    return recipients.map(to => ({ to, success: false, error: e.message }));
+  }
 
   const results = [];
-
   for (const to of recipients) {
     try {
-      // Windows 下用 PowerShell 调用 bash
-      const cmd = `bash "${gatewayScript}" send --to "${to}" --subject "${subject.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"').substring(0, 5000)}"`;
-
-      await execAsync(cmd, { timeout: 30000 });
+      await transporter.sendMail({
+        from: `"${smtpFromName}" <${smtpFromAddr}>`,
+        to,
+        subject,
+        html: `<div style="font-family:sans-serif;max-width:680px;margin:0 auto">
+          <h2 style="color:#6c5ce7">${article.title}</h2>
+          <div style="line-height:1.8;color:#333">${article.content.replace(/\n/g, '<br>')}</div>
+          <hr style="border:none;border-top:1px solid #eee;margin:20px 0">
+          <p style="color:#999;font-size:12px">此邮件由 WorkBuddy 自动发送</p>
+        </div>`
+      });
       results.push({ to, success: true });
     } catch (e) {
       results.push({ to, success: false, error: e.message });

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据统计 - WorkBuddy</title>
+    <link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+    <div class="layout">
+        <nav class="sidebar" id="sidebar"></nav>
+        <main class="content">
+            <div class="page-header">
+                <h1>📊 数据统计</h1>
+                <p class="subtitle">发布趋势与内容分析</p>
+            </div>
+
+            <!-- 概览卡片 -->
+            <div class="stats-cards" id="overviewCards">
+                <div class="stat-card"><div class="stat-value" id="totalArticles">-</div><div class="stat-label">总文章</div></div>
+                <div class="stat-card"><div class="stat-value" id="todayPublished">-</div><div class="stat-label">今日发布</div></div>
+                <div class="stat-card"><div class="stat-value" id="weekPublished">-</div><div class="stat-label">本周发布</div></div>
+                <div class="stat-card"><div class="stat-value" id="successRate">-</div><div class="stat-label">成功率</div></div>
+            </div>
+
+            <!-- 平台分布 -->
+            <div class="section">
+                <h2>平台分布（近7天）</h2>
+                <div class="platform-bars" id="platformBars"></div>
+            </div>
+
+            <!-- 趋势图 -->
+            <div class="section">
+                <h2>发布趋势（近30天）</h2>
+                <div class="trend-chart" id="trendChart"></div>
+            </div>
+
+            <!-- 最近发布 -->
+            <div class="section">
+                <h2>最近发布</h2>
+                <div id="recentList"></div>
+            </div>
+        </main>
+    </div>
+
+    <link rel="stylesheet" href="/components/nav.html">
+    <script src="/js/common.js"></script>
+    <style>
+        .stats-cards { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: var(--card-bg, #fff); border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+        .stat-value { font-size: 2em; font-weight: 700; color: var(--primary, #4f46e5); }
+        .stat-label { color: #888; margin-top: 4px; font-size: .9em; }
+        .section { background: var(--card-bg, #fff); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+        .section h2 { margin-top: 0; }
+        .platform-row { display: flex; align-items: center; margin: 8px 0; }
+        .platform-name { width: 80px; font-weight: 600; }
+        .platform-bar { flex: 1; height: 24px; background: #e5e7eb; border-radius: 12px; overflow: hidden; }
+        .platform-fill { height: 100%; border-radius: 12px; transition: width .5s; }
+        .platform-count { width: 50px; text-align: right; margin-left: 8px; }
+        .trend-bar-row { display: flex; align-items: flex-end; gap: 4px; height: 150px; padding-top: 10px; }
+        .trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+        .trend-bar { width: 100%; max-width: 24px; background: var(--primary, #4f46e5); border-radius: 4px 4px 0 0; transition: height .3s; min-height: 2px; }
+        .trend-label { font-size: .65em; color: #999; margin-top: 4px; writing-mode: vertical-rl; text-orientation: mixed; }
+        .recent-item { padding: 10px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; }
+        .recent-item:last-child { border-bottom: none; }
+        @media (max-width: 768px) { .stats-cards { grid-template-columns: repeat(2,1fr); } }
+    </style>
+    <script>
+        async function loadOverview() {
+            try {
+                const r = await (await fetch('/api/stats/overview?days=7')).json();
+                if (!r.success) return;
+                const d = r.data;
+                document.getElementById('totalArticles').textContent = d.totalArticles;
+                document.getElementById('todayPublished').textContent = d.todayPublished;
+                document.getElementById('weekPublished').textContent = d.weekPublished;
+                document.getElementById('successRate').textContent = d.successRate + '%';
+
+                const bars = document.getElementById('platformBars');
+                const p = d.byPlatform;
+                const maxP = Math.max(p.cms || 0, p.wechat || 0, p.xiaohongshu || 0, 1);
+                const names = { cms: 'CMS', wechat: '微信', xiaohongshu: '小红书' };
+                const colors = { cms: '#4f46e5', wechat: '#07c160', xiaohongshu: '#ff2442' };
+                bars.innerHTML = Object.entries(p).filter(([_,v]) => v > 0).map(([k,v]) => `
+                    <div class="platform-row">
+                        <div class="platform-name">${names[k]||k}</div>
+                        <div class="platform-bar"><div class="platform-fill" style="width:${(v/maxP*100)}%;background:${colors[k]||'#999'}"></div></div>
+                        <div class="platform-count">${v}</div>
+                    </div>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadTrends() {
+            try {
+                const r = await (await fetch('/api/stats/trends?days=30')).json();
+                if (!r.success || !r.data.length) return;
+                const chart = document.getElementById('trendChart');
+                const maxVal = Math.max(...r.data.map(d => d.total), 1);
+                chart.innerHTML = '<div class="trend-bar-row">' + r.data.map(d => {
+                    const h = Math.round((d.total / maxVal) * 140);
+                    const date = d.date.slice(5);
+                    return `<div class="trend-col"><div class="trend-bar" style="height:${h}px" title="${d.date}: ${d.total}条"></div><div class="trend-label">${date}</div></div>`;
+                }).join('') + '</div>';
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadRecent() {
+            try {
+                const r = await (await fetch('/api/content/recent?limit=10')).json();
+                if (!r.success) return;
+                document.getElementById('recentList').innerHTML = r.data.map(a => `
+                    <div class="recent-item">
+                        <span>${a.title}</span>
+                        <span style="color:#999;font-size:.85em">${a.createdAt}</span>
+                    </div>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        loadOverview(); loadTrends(); loadRecent();
+    </script>
+</body>
+</html>

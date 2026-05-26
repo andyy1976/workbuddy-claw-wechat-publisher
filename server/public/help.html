@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>帮助 - WorkBuddy</title>
+    <link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+    <div class="layout">
+        <nav class="sidebar" id="sidebar"></nav>
+        <main class="content">
+            <div class="page-header">
+                <h1>❓ 帮助中心</h1>
+            </div>
+            <div class="section">
+                <h2>快速入门</h2>
+                <ol>
+                    <li><b>内容生成</b> — 输入主题，选择风格，AI自动生成文章</li>
+                    <li><b>去AI味</b> — 粘贴AI生成的文本，自动润色为自然表达</li>
+                    <li><b>一键发布</b> — 生成后直接发布到CMS和微信草稿箱</li>
+                    <li><b>定时任务</b> — 设置每天自动采集热点、生成并发布</li>
+                </ol>
+            </div>
+            <div class="section">
+                <h2>功能说明</h2>
+                <table style="width:100%;border-collapse:collapse">
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:8px"><b>✍️ 内容生成</b></td><td>支持专业/卡兹克/轻松/技术四种风格</td></tr>
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:8px"><b>🧹 去AI味</b></td><td>消除模板化表达，增加人味</td></tr>
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:8px"><b>📤 一键发布</b></td><td>CMS + 微信草稿箱同步</td></tr>
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:8px"><b>📅 定时任务</b></td><td>每日9点自动执行</td></tr>
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:8px"><b>📊 数据统计</b></td><td>发布趋势、成功率、平台分布</td></tr>
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:8px"><b>🏭 产品数据</b></td><td>产品信息管理和引用</td></tr>
+                    <tr><td style="padding:8px"><b>🧠 模型配置</b></td><td>DeepSeek/火山引擎多模型切换</td></tr>
+                </table>
+            </div>
+            <div class="section">
+                <h2>方法论三条铁律</h2>
+                <ul>
+                    <li><b>时间感知</b> — 超30天事件需注明"截至X月"，禁止预测性语句</li>
+                    <li><b>角度陌生化</b> — 逆向思考，角色转换，避免套话</li>
+                    <li><b>人称诚意</b> — 优先"你"作主语，禁止虚构经历</li>
+                </ul>
+            </div>
+            <div class="section">
+                <h2>系统信息</h2>
+                <p>版本: <span id="version">-</span> | 运行时间: <span id="uptime">-</span></p>
+            </div>
+        </main>
+    </div>
+    <link rel="stylesheet" href="/components/nav.html">
+    <script src="/js/common.js"></script>
+    <style>.section{background:var(--card-bg,#fff);border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.1)}.section h2{margin-top:0}</style>
+    <script>
+        fetch('/api/health').then(r=>r.json()).then(d=>{
+            document.getElementById('version').textContent=d.version||'-';
+            const s=Math.round(d.uptime||0);const h=Math.floor(s/3600);const m=Math.floor((s%3600)/60);
+            document.getElementById('uptime').textContent=h+'时'+m+'分';
+        }).catch(()=>{});
+    </script>
+</body>
+</html>

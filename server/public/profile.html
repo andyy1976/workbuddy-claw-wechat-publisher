@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的设置 - WorkBuddy</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <style>
+        .profile-wrap { max-width: 900px; margin: 0 auto; }
+
+        /* Header */
+        .profile-hero { display:flex; align-items:center; gap:20px; padding:28px; background:linear-gradient(135deg,var(--accent),#8b5cf6); border-radius:var(--radius); margin-bottom:28px; }
+        .avatar-lg { width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#fff; }
+        .profile-hero h2 { margin:0 0 4px; color:#fff; }
+        .badge { background:rgba(255,255,255,.2); color:#fff; padding:2px 10px; border-radius:12px; font-size:12px; }
+
+        /* Cards */
+        .s-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:24px; margin-bottom:20px; }
+        .s-card h3 { margin:0 0 18px; padding-bottom:14px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; font-size:16px; }
+        .s-card h3 .ic { font-size:20px; }
+
+        /* Form */
+        .fg { margin-bottom:16px; }
+        .fg label { display:block; font-weight:500; margin-bottom:6px; color:var(--text); font-size:14px; }
+        .fg .hint { font-size:12px; color:var(--text2); margin-top:4px; }
+        .fi { width:100%; padding:10px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:14px; box-sizing:border-box; transition:border-color .2s; }
+        .fi:focus { border-color:var(--accent); outline:none; }
+        .fi::placeholder { color:var(--text2); }
+        select.fi { appearance:auto; }
+
+        /* Tag Input */
+        .tag-box { display:flex; flex-wrap:wrap; gap:6px; padding:8px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; min-height:44px; cursor:text; }
+        .tag-box:focus-within { border-color:var(--accent); }
+        .tag { background:rgba(108,92,231,.2); color:var(--accent2); padding:4px 10px; border-radius:6px; font-size:13px; display:flex; align-items:center; gap:4px; }
+        .tag .x { cursor:pointer; font-weight:700; margin-left:2px; opacity:.7; }
+        .tag .x:hover { opacity:1; }
+        .tag-in { border:none; outline:none; background:none; color:var(--text); flex:1; min-width:100px; font-size:14px; padding:4px; }
+        .tag-in::placeholder { color:var(--text2); }
+
+        /* Buttons */
+        .btn { padding:9px 22px; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:500; transition:all .2s; }
+        .btn-p { background:var(--accent); color:#fff; }
+        .btn-p:hover { background:#5b4bd5; }
+        .btn-s { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+        .btn-s:hover { background:var(--border); }
+        .btn-d { background:var(--danger); color:#fff; }
+        .btn-d:hover { opacity:.9; }
+        .btn-sm { padding:6px 14px; font-size:12px; }
+        .btn-row { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
+
+        /* Status */
+        .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; }
+        .dot-ok { background:var(--success); }
+        .dot-no { background:var(--danger); }
+        .smtp-info { font-size:13px; color:var(--text2); margin-bottom:12px; }
+
+        /* Model cards */
+        .model-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
+        .model-card { background:var(--surface2); border:2px solid var(--border); border-radius:10px; padding:14px; cursor:pointer; transition:all .2s; position:relative; }
+        .model-card:hover { border-color:var(--accent); }
+        .model-card.selected { border-color:var(--accent); background:rgba(108,92,231,.1); }
+        .model-card .model-name { font-weight:600; font-size:14px; margin-bottom:4px; }
+        .model-card .model-desc { font-size:12px; color:var(--text2); }
+        .model-card .model-badge { position:absolute; top:8px; right:10px; font-size:11px; }
+        .model-card .check { position:absolute; bottom:8px; right:10px; color:var(--accent); font-size:18px; }
+
+        /* Methodology chips */
+        .method-chips { display:flex; flex-wrap:wrap; gap:8px; }
+        .method-chip { padding:6px 14px; border-radius:20px; font-size:13px; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); transition:all .2s; }
+        .method-chip:hover { border-color:var(--accent); color:var(--text); }
+        .method-chip.on { background:rgba(108,92,231,.2); border-color:var(--accent); color:var(--accent2); }
+
+        /* Login modal */
+        .modal-bg { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index:1000; }
+        .modal-box { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:36px; width:420px; max-width:90vw; }
+        .modal-box h2 { margin:0 0 20px; text-align:center; }
+        .tab-sw { display:flex; margin-bottom:20px; border-bottom:2px solid var(--border); }
+        .tab-sw button { flex:1; padding:10px; border:none; background:none; font-size:15px; cursor:pointer; color:var(--text2); border-bottom:2px solid transparent; margin-bottom:-2px; }
+        .tab-sw button.on { color:var(--accent2); border-bottom-color:var(--accent); font-weight:600; }
+
+        /* Two-col */
+        .two-col { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+        @media(max-width:640px) { .two-col { grid-template-columns:1fr; } }
+    </style>
+</head>
+<body>
+<div class="app">
+    <nav id="mainNav" class="sidebar"></nav>
+    <div class="main-content">
+        <div class="top-bar"><h1>👤 我的设置</h1></div>
+        <div class="page-content">
+
+<!-- ===== 未登录 ===== -->
+<div id="secLogin" style="display:none;">
+    <div class="modal-bg">
+        <div class="modal-box">
+            <h2>🚀 WorkBuddy</h2>
+            <div class="tab-sw">
+                <button class="on" onclick="swTab('login',this)">登录</button>
+                <button onclick="swTab('register',this)">注册</button>
+            </div>
+            <div id="frmLogin">
+                <div class="fg"><label>用户名/邮箱</label><input class="fi" id="lUser" placeholder="请输入"></div>
+                <div class="fg"><label>密码</label><input class="fi" id="lPass" type="password" placeholder="请输入密码"></div>
+                <button class="btn btn-p" style="width:100%;margin-top:8px" onclick="doLogin()">登 录</button>
+            </div>
+            <div id="frmReg" style="display:none;">
+                <div class="fg"><label>用户名 *</label><input class="fi" id="rUser" placeholder="设置用户名"></div>
+                <div class="fg"><label>邮箱</label><input class="fi" id="rEmail" type="email" placeholder="可选"></div>
+                <div class="fg"><label>显示名</label><input class="fi" id="rName" placeholder="可选"></div>
+                <div class="fg"><label>密码 *</label><input class="fi" id="rPass" type="password" placeholder="至少6位"></div>
+                <button class="btn btn-p" style="width:100%;margin-top:8px" onclick="doRegister()">注 册</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== 已登录 ===== -->
+<div id="secProfile" style="display:none;">
+    <div class="profile-wrap">
+        <!-- Hero -->
+        <div class="profile-hero">
+            <div class="avatar-lg" id="uAvatar">A</div>
+            <div style="flex:1"><h2 id="uName">用户</h2><span class="badge" id="uRole">user</span></div>
+            <button class="btn btn-s" onclick="doLogout()" style="color:#fff;border-color:rgba(255,255,255,.3)">退出</button>
+        </div>
+
+        <!-- 1. AI 模型配置 -->
+        <div class="s-card">
+            <h3><span class="ic">🤖</span>AI 模型选择</h3>
+            <div class="model-grid" id="modelGrid"></div>
+            <div class="fg" style="margin-top:16px">
+                <label>自定义 API Key（留空则用系统默认）</label>
+                <input class="fi" id="customApiKey" placeholder="sk-xxxx...">
+                <div class="hint">填入后覆盖系统级 Key，适合企业用户自带 Key</div>
+            </div>
+            <div class="btn-row"><button class="btn btn-p btn-sm" onclick="saveModelSettings()">保存模型配置</button></div>
+        </div>
+
+        <!-- 2. 角度 & 方法论 -->
+        <div class="s-card">
+            <h3><span class="ic">🎯</span>写作角度 & 方法论</h3>
+            <div class="fg">
+                <label>启用的方法论（多选）</label>
+                <div class="method-chips" id="methodChips">
+                    <div class="method-chip" data-k="threeIronRules" onclick="toggleChip(this)">⚖️ 三条铁律</div>
+                    <div class="method-chip" data-k="emotionArc" onclick="toggleChip(this)">📈 情绪曲线</div>
+                    <div class="method-chip" data-k="angleStranger" onclick="toggleChip(this)">🔄 角度陌生化</div>
+                    <div class="method-chip" data-k="redGreenCard" onclick="toggleChip(this)">🃏 红绿牌分析</div>
+                    <div class="method-chip" data-k="storyAnalyze" onclick="toggleChip(this)">📖 故事拆解</div>
+                    <div class="method-chip" data-k="valueFilter" onclick="toggleChip(this)">💎 价值过滤</div>
+                    <div class="method-chip" data-k="mediciCollision" onclick="toggleChip(this)">💥 美第奇碰撞</div>
+                    <div class="method-chip" data-k="dataPredict" onclick="toggleChip(this)">📊 数据预测</div>
+                </div>
+            </div>
+            <div class="fg">
+                <label>人称偏好</label>
+                <select class="fi" id="personPref">
+                    <option value="you">优先"你"作主语</option>
+                    <option value="we">我们</option>
+                    <option value="third">第三人称</option>
+                    <option value="first">第一人称（我）</option>
+                </select>
+            </div>
+            <div class="fg">
+                <label>文章结构偏好</label>
+                <select class="fi" id="structPref">
+                    <option value="auto">自动（AI 决定）</option>
+                    <option value="story">故事化叙事</option>
+                    <option value="list">清单式</option>
+                    <option value="analysis">深度分析</option>
+                    <option value="contrast">对比评测</option>
+                </select>
+            </div>
+            <div class="btn-row"><button class="btn btn-p btn-sm" onclick="saveMethodSettings()">保存方法论配置</button></div>
+        </div>
+
+        <!-- 3. 关键词 & 栏目 -->
+        <div class="s-card">
+            <h3><span class="ic">🔑</span>内容关键词 & 栏目</h3>
+            <div class="fg">
+                <label>生成关键词</label>
+                <div class="tag-box" id="kwBox" onclick="document.getElementById('kwIn').focus()">
+                    <input class="tag-in" id="kwIn" placeholder="输入关键词后回车" onkeydown="tagKey(event,'kwBox','kwIn','rmKw')">
+                </div>
+                <div class="hint">AI 生成文章时优先使用这些关键词</div>
+            </div>
+            <div class="two-col">
+                <div class="fg">
+                    <label>关联 CMS 栏目</label>
+                    <select class="fi" id="cmsCat"><option value="">自动匹配</option></select>
+                    <div class="hint">文章将优先发到该栏目</div>
+                </div>
+                <div class="fg">
+                    <label>默认语言</label>
+                    <select class="fi" id="defLang">
+                        <option value="zh-CN">中文</option>
+                        <option value="en-US">English</option>
+                        <option value="ja-JP">日本語</option>
+                    </select>
+                </div>
+            </div>
+            <div class="two-col">
+                <div class="fg">
+                    <label>默认风格</label>
+                    <select class="fi" id="defStyle">
+                        <option value="professional">专业严谨</option>
+                        <option value="casual">轻松活泼</option>
+                        <option value="technical">技术深度</option>
+                        <option value="storytelling">故事化叙事</option>
+                        <option value="kazik">卡兹克风格</option>
+                    </select>
+                </div>
+                <div class="fg">
+                    <label>文章字数偏好</label>
+                    <select class="fi" id="defLen">
+                        <option value="2000">2000 字</option>
+                        <option value="4000" selected>4000 字</option>
+                        <option value="6000">6000 字</option>
+                    </select>
+                </div>
+            </div>
+            <div class="btn-row"><button class="btn btn-p btn-sm" onclick="saveKwSettings()">保存关键词配置</button></div>
+        </div>
+
+        <!-- 4. 邮箱通知 -->
+        <div class="s-card">
+            <h3><span class="ic">📧</span>邮箱通知</h3>
+            <div class="smtp-info" id="smtpInfo"></div>
+            <div class="fg">
+                <label>接收人</label>
+                <div class="tag-box" id="emBox" onclick="document.getElementById('emIn').focus()">
+                    <input class="tag-in" id="emIn" placeholder="输入邮箱后回车" onkeydown="tagKey(event,'emBox','emIn','rmEm')">
+                </div>
+            </div>
+            <div class="fg">
+                <label>邮件主题模板</label>
+                <input class="fi" id="emSubject" placeholder="【WorkBuddy】${title} - ${date}">
+                <div class="hint">变量: ${title} 标题, ${date} 日期, ${category} 栏目</div>
+            </div>
+            <div class="fg">
+                <label>发送时机</label>
+                <select class="fi" id="emTrigger">
+                    <option value="onPublish">每次发布后</option>
+                    <option value="onError">仅失败时</option>
+                    <option value="daily">每日汇总</option>
+                    <option value="never">关闭邮件通知</option>
+                </select>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-p btn-sm" onclick="saveEmailSettings()">保存邮箱配置</button>
+                <button class="btn btn-s btn-sm" onclick="testEmail()">发送测试邮件</button>
+            </div>
+        </div>
+
+        <!-- 5. CMS & 微信 -->
+        <div class="s-card">
+            <h3><span class="ic">🔗</span>发布渠道</h3>
+            <div class="two-col">
+                <div class="fg">
+                    <label>CMS 发布状态</label>
+                    <select class="fi" id="cmsStatus">
+                        <option value="0">草稿</option>
+                        <option value="1">直接发布</option>
+                    </select>
+                </div>
+                <div class="fg">
+                    <label>微信发布</label>
+                    <select class="fi" id="wxMode">
+                        <option value="draft">发到草稿箱</option>
+                        <option value="direct">直接群发</option>
+                        <option value="off">不发布微信</option>
+                    </select>
+                </div>
+            </div>
+            <div class="btn-row"><button class="btn btn-p btn-sm" onclick="savePublishSettings()">保存发布配置</button></div>
+        </div>
+
+        <!-- 6. 修改密码 -->
+        <div class="s-card">
+            <h3><span class="ic">🔒</span>账号安全</h3>
+            <div class="two-col">
+                <div class="fg"><label>旧密码</label><input class="fi" id="oldPwd" type="password"></div>
+                <div class="fg"><label>新密码</label><input class="fi" id="newPwd" type="password" placeholder="至少6位"></div>
+            </div>
+            <div class="btn-row"><button class="btn btn-p btn-sm" onclick="changePwd()">修改密码</button></div>
+        </div>
+    </div>
+</div>
+
+        </div>
+    </div>
+</div>
+
+<script src="/js/common.js"></script>
+<script>
+// ── Auth ───────────────────────────────────
+const TK='wb_token';
+function gt(){return localStorage.getItem(TK)}
+function ah(){const t=gt();return t?{'Authorization':'Bearer '+t}:{}}
+async function jq(url, opts = {}) {
+    try {
+        const res = await fetch(url, {
+            ...opts,
+            headers: { 'Content-Type': 'application/json', ...ah(), ...(opts.headers || {}) }
+        });
+        return await res.json();
+    } catch (e) {
+        console.error('[jq] Request failed:', url, e);
+        return { success: false, message: `请求失败: ${e.message}` };
+    }
+}
+
+// ── Init ────────────────────────────────────
+async function init(){
+    if(!gt()){showLogin();return}
+    try{
+        const d=await jq('/api/auth/me');
+        if(!d.success){localStorage.removeItem(TK);showLogin();return}
+        showProfile(d.user);
+        loadAll();
+    }catch{localStorage.removeItem(TK);showLogin()}
+}
+
+function showLogin(){document.getElementById('secLogin').style.display='';document.getElementById('secProfile').style.display='none'}
+function showProfile(u){
+    document.getElementById('secLogin').style.display='none';
+    document.getElementById('secProfile').style.display='';
+    document.getElementById('uAvatar').textContent=(u.displayName||u.username).charAt(0).toUpperCase();
+    document.getElementById('uName').textContent=u.displayName||u.username;
+    document.getElementById('uRole').textContent=u.role==='admin'?'管理员':'用户';
+}
+
+// ── Login/Register ──────────────────────────
+function swTab(t,btn){
+    document.querySelectorAll('.tab-sw button').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+    document.getElementById('frmLogin').style.display=t==='login'?'':'none';
+    document.getElementById('frmReg').style.display=t==='register'?'':'none';
+}
+
+async function doLogin(){
+    const d=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:document.getElementById('lUser').value.trim(),password:document.getElementById('lPass').value})}).then(r=>r.json());
+    if(d.success){localStorage.setItem(TK,d.token);showProfile(d.user);loadAll()}else alert(d.message);
+}
+async function doRegister(){
+    const d=await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:document.getElementById('rUser').value.trim(),password:document.getElementById('rPass').value,email:document.getElementById('rEmail').value.trim(),displayName:document.getElementById('rName').value.trim()})}).then(r=>r.json());
+    if(d.success){localStorage.setItem(TK,d.token);showProfile(d.user);loadAll()}else alert(d.message);
+}
+function doLogout(){localStorage.removeItem(TK);showLogin()}
+
+async function changePwd(){
+    const d=await jq('/api/auth/password',{method:'PUT',body:JSON.stringify({oldPassword:document.getElementById('oldPwd').value,newPassword:document.getElementById('newPwd').value})});
+    alert(d.message);if(d.success){document.getElementById('oldPwd').value='';document.getElementById('newPwd').value=''}
+}
+
+// ── Load All Settings ───────────────────────
+let S={};
+async function loadAll(){
+    const [sd,md]=await Promise.all([jq('/api/user-settings/'),jq('/api/models')]);
+    if(sd.success)S=sd.settings;
+    // Models
+    if(md.success)renderModels(md.data||md);
+    // SMTP
+    const smtp=S._smtp||{};
+    document.getElementById('smtpInfo').innerHTML=`<span class="dot ${smtp.configured?'dot-ok':'dot-no'}"></span>SMTP: ${smtp.configured?smtp.user+'@'+smtp.host:'未配置（.env 中设置 SMTP_HOST/USER/PASS）'}`;
+    // Email - 默认使用用户注册邮箱
+    const em=S.email||{};
+    const userEmail=(sd.user&&sd.user.email)||'';
+    const defaultRecipients=em.recipients?.length?em.recipients:(userEmail?[userEmail]:[]);
+    console.log('[loadAll] user email:', userEmail);
+    console.log('[loadAll] default recipients:', defaultRecipients);
+    renderTags('emBox','emIn',defaultRecipients,'rmEm');
+    document.getElementById('emSubject').value=em.subject||'';
+    document.getElementById('emTrigger').value=em.trigger||'onPublish';
+    // Keywords
+    const kw=S.keywords||{};
+    renderTags('kwBox','kwIn',kw.list||[],'rmKw');
+    document.getElementById('defLang').value=kw.language||'zh-CN';
+    document.getElementById('defStyle').value=kw.style||'professional';
+    document.getElementById('defLen').value=kw.length||'4000';
+    // CMS categories
+    loadCats();
+    const cms=S.cms||{};
+    document.getElementById('cmsStatus').value=cms.publishStatus||'0';
+    // Method
+    const mt=S.methodology||{};
+    document.querySelectorAll('#methodChips .method-chip').forEach(c=>{if(mt[c.dataset.k])c.classList.add('on')});
+    document.getElementById('personPref').value=mt.person||'you';
+    document.getElementById('structPref').value=mt.structure||'auto';
+    // Model user override
+    const mu=S.model||{};
+    if(mu.customApiKey)document.getElementById('customApiKey').value=mu.customApiKey;
+    // Publish
+    const pub=S.publish||{};
+    document.getElementById('wxMode').value=pub.wechatMode||'draft';
+}
+
+// ── Models Grid ─────────────────────────────
+let modelsData={};
+function renderModels(data){
+    modelsData=data;
+    const sel=data._selected||'';
+    const grid=document.getElementById('modelGrid');
+    grid.innerHTML='';
+    for(const[k,v]of Object.entries(data)){
+        if(k.startsWith('_'))continue;
+        const card=document.createElement('div');
+        card.className='model-card'+(k===sel?' selected':'');
+        card.dataset.key=k;
+        card.innerHTML=`<div class="model-name">${v.name||k}</div><div class="model-desc">${v.description||v.model||''}</div><div class="model-badge" style="color:${v.enabled?'var(--success)':'var(--text2)'}">${v.enabled?'可用':'未配置'}</div>${k===sel?'<div class="check">✓</div>':''}`;
+        card.onclick=()=>selectModel(k);
+        grid.appendChild(card);
+    }
+    // User override
+    const mu=S.model||{};
+    if(mu.selected)selectModel(mu.selected,true);
+}
+function selectModel(k,noSave){
+    document.querySelectorAll('.model-card').forEach(c=>{c.classList.toggle('selected',c.dataset.key===k);c.querySelector('.check')?.remove();if(c.dataset.key===k)c.insertAdjacentHTML('beforeend','<div class="check">✓</div>')});
+}
+async function loadCats(){
+    try{
+        const r=await fetch('/api/cms/categories');const d=await r.json();
+        if(!d.success)return;
+        const sel=document.getElementById('cmsCat');
+        const sel2=document.getElementById('cmsCat'); // reuse for CMS card
+        for(const[id,cat]of Object.entries(d.data)){
+            sel.appendChild(new Option(cat.name,id));
+        }
+        // restore
+        const kw=S.keywords||{};if(kw.categoryId)sel.value=kw.categoryId;
+        const cms=S.cms||{};if(cms.categoryId)sel.value=cms.categoryId;
+    }catch{}
+}
+
+// ── Tag Helpers ─────────────────────────────
+function renderTags(boxId,inId,tags,rmFn){
+    const c=document.getElementById(boxId),inp=document.getElementById(inId);
+    c.querySelectorAll('.tag').forEach(t=>t.remove());
+    tags.forEach(t=>{const el=document.createElement('span');el.className='tag';el.innerHTML=`${t} <span class="x" onclick="${rmFn}('${t}')">×</span>`;c.insertBefore(el,inp)});
+}
+function getTags(id){return Array.from(document.querySelectorAll(`#${id} .tag`)).map(t=>t.textContent.replace('×','').trim())}
+function addTag(boxId,inId,v,rmFn){if(!v.trim())return;const tags=getTags(boxId);if(tags.includes(v.trim()))return;tags.push(v.trim());renderTags(boxId,inId,tags,rmFn);document.getElementById(inId).value=''}
+function tagKey(e,boxId,inId,rmFn){if(e.key==='Enter'){e.preventDefault();addTag(boxId,inId,e.target.value,rmFn)}}
+function rmEm(t){renderTags('emBox','emIn',getTags('emBox').filter(x=>x!==t),'rmEm')}
+function rmKw(t){renderTags('kwBox','kwIn',getTags('kwBox').filter(x=>x!==t),'rmKw')}
+
+function toggleChip(el){el.classList.toggle('on')}
+
+// ── Save Functions ──────────────────────────
+async function sv(k,v){const d=await jq(`/api/user-settings/${k}`,{method:'PUT',body:JSON.stringify(v)});if(d.success)showToast('✅ '+d.message);else alert(d.message)}
+
+function saveModelSettings(){
+    const sel=document.querySelector('.model-card.selected');
+    sv('model',{selected:sel?sel.dataset.key:'',customApiKey:document.getElementById('customApiKey').value.trim()});
+}
+function saveMethodSettings(){
+    const methods={};
+    document.querySelectorAll('#methodChips .method-chip.on').forEach(c=>{methods[c.dataset.k]=true});
+    sv('methodology',{...methods,person:document.getElementById('personPref').value,structure:document.getElementById('structPref').value});
+}
+function saveKwSettings(){
+    sv('keywords',{list:getTags('kwBox'),categoryId:document.getElementById('cmsCat').value,language:document.getElementById('defLang').value,style:document.getElementById('defStyle').value,length:document.getElementById('defLen').value});
+}
+function saveEmailSettings(){
+    const tags=getTags('emBox');
+    const pending=document.getElementById('emIn').value.trim();
+    const allRecipients=pending?[...tags,pending]:tags;
+    if(allRecipients.length===0)return alert('请先添加接收人（输入邮箱后回车或直接保存）');
+    sv('email',{recipients:allRecipients,subject:document.getElementById('emSubject').value,trigger:document.getElementById('emTrigger').value});
+}
+function savePublishSettings(){
+    sv('publish',{wechatMode:document.getElementById('wxMode').value});
+}
+function saveCmsSettings(){
+    sv('cms',{categoryId:document.getElementById('cmsCat').value,publishStatus:document.getElementById('cmsStatus').value});
+}
+
+async function testEmail(){
+    const rc=getTags('emBox');
+    const pending=document.getElementById('emIn').value.trim();
+    const allRecipients=pending?[...rc,pending]:rc;
+    if(!allRecipients.length)return alert('请先添加接收人（输入邮箱后回车或直接保存）');
+    const d=await jq('/api/user-settings/test-email',{method:'POST',body:JSON.stringify({to:allRecipients[0]})});
+    alert(d.message);
+}
+
+// ── Boot ────────────────────────────────────
+init();
+</script>
+</body>
+</html>

@@ -87,21 +87,31 @@ async function uploadThumbnailToWechat(token, imagePath) {
 // 发布到微信草稿箱
 async function publishToWechatDraft(token, title, contentHtml, thumbMediaId, author) {
     const draftUrl = `https://api.weixin.qq.com/cgi-bin/draft/add?access_token=${token}`;
-    const digest = (contentHtml || '').replace(/<[^>]+>/g, '').slice(0, 120);
     
-    const draftBody = JSON.stringify({
-        articles: [{
-            title,
-            author: author || '超云艾艾',
-            digest,
-            content: contentHtml,
-            thumb_media_id: thumbMediaId || '',
-            show_cover_pic: 1,
-            need_open_comment: 1,
-            only_fans_can_comment: 0
-        }]
-    });
-
+    // 微信内容预处理
+    let cleanHtml = contentHtml
+        .replace(/<p>\s*(标题|Title)[\s:：][^<]*<\/p>/gi, '')
+        .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '')
+        .trim();
+    
+    const digest = cleanHtml.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').slice(0, 120);
+    
+    const articles = [{
+        title: String(title || '').substring(0, 64),
+        author: author || '超云艾艾',
+        digest: digest,
+        content: cleanHtml,
+        thumb_media_id: thumbMediaId || '',
+        show_cover_pic: 1,
+        need_open_comment: 1,
+        only_fans_can_comment: 0
+    }];
+    
+    const draftBody = JSON.stringify({ articles });
+    
+    // 调试：记录请求体（不含完整content）
+    console.log('   📤 微信草稿请求 - title:', title, '| content长度:', cleanHtml.length);
+    
     return new Promise((resolve, reject) => {
         const urlObj = new URL(draftUrl);
         const req = https.request({
@@ -118,8 +128,9 @@ async function publishToWechatDraft(token, title, contentHtml, thumbMediaId, aut
             let d = '';
             res.on('data', c => d += c);
             res.on('end', () => { 
+                console.log('   📥 微信响应:', d);
                 try { resolve(JSON.parse(d)); } 
-                catch { resolve({ raw: d }); } 
+                catch { resolve({ raw: d, parse_error: true }); } 
             });
         });
         req.on('error', reject);
@@ -140,7 +151,12 @@ async function saveToCMS(title, content, categoryId = 0, source = 'WorkBuddy') {
             status: 1,
             source
         });
-        return result;
+        // 兼容 articleId / aid 两种返回格式
+        return {
+            success: result.success !== false,
+            aid: result.articleId || result.aid,
+            ...result
+        };
     } catch (e) {
         console.error('   CMS保存失败:', e.message);
         return { success: false, error: e.message };
@@ -148,7 +164,7 @@ async function saveToCMS(title, content, categoryId = 0, source = 'WorkBuddy') {
 }
 
 // 记录发布日志
-async function logPublish(title, platform, status, details = {}) {
+async function logPublish(contentId, title, platform, status, errorMsg = '') {
     const mysql = require('mysql2/promise');
     const dbConfig = {
         host: process.env.DB_HOST || '82.156.40.94',
@@ -161,19 +177,11 @@ async function logPublish(title, platform, status, details = {}) {
     let pool;
     try {
         pool = mysql.createPool(dbConfig);
-        
-        if (platform === 'cms') {
-            await pool.execute(
-                `INSERT INTO content_publish_log (title, cms_status, details, created_at) VALUES (?, ?, ?, NOW())`,
-                [title, status, JSON.stringify(details)]
-            );
-        } else if (platform === 'wechat') {
-            await pool.execute(
-                `INSERT INTO content_publish_log (title, wechat_status, details, created_at) VALUES (?, ?, ?, NOW())`,
-                [title, status, JSON.stringify(details)]
-            );
-        }
-        
+        await pool.execute(
+            `INSERT INTO content_publish_log (content_id, platform, status, error_msg, published_at)
+             VALUES (?, ?, ?, ?, ${status === 'success' ? 'NOW()' : 'NULL'})`,
+            [contentId || 0, platform, status, errorMsg]
+        );
         pool.end();
     } catch (e) {
         console.warn('   发布日志记录失败:', e.message);
@@ -227,6 +235,18 @@ async function publishFlow(options) {
         console.warn('   ⚠️ Markdown转换失败，使用原始内容:', e.message);
     }
 
+    // Step 1.5: 微信内容清洗（修复47001 data format error）
+    contentHtml = contentHtml
+        // 去除AI输出的「标题：」行
+        .replace(/<p>[^<]*^(标题|Title)[\s:：][^<]*<\/p>/gi, '')
+        // 中文引号转为英文（微信兼容性）
+        .replace(/[""\'']/g, "'")
+        // 去除控制字符
+        .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '')
+        // 确保没有裸文本级别的「标题：」
+        .replace(/^(标题|Title)[\s:：].*?(\r?\n)/gm, '')
+        .trim();
+
     // Step 2: 处理缩略图
     let thumbMediaId = null;
     let finalContentHtml = contentHtml;
@@ -272,18 +292,20 @@ async function publishFlow(options) {
     }
 
     // Step 3: 保存到CMS
+    let cmsAid = null;  // 提取到外层
     if (toCMS) {
         try {
             const cmsResult = await saveToCMS(title, content, categoryId, source);
             if (cmsResult.success) {
+                cmsAid = cmsResult.aid;
                 result.cms = { success: true, aid: cmsResult.aid };
                 console.log(`   ✅ CMS保存成功 (ID: ${cmsResult.aid})`);
-                await logPublish(title, 'cms', 'success', { aid: cmsResult.aid });
+                await logPublish(cmsResult.aid, title, 'cms', 'success', '');
             } else {
                 result.cms = { success: false, error: cmsResult.message };
                 result.errors.push('CMS保存失败: ' + cmsResult.message);
                 console.error(`   ❌ CMS保存失败: ${cmsResult.message}`);
-                await logPublish(title, 'cms', 'failed', { error: cmsResult.message });
+                await logPublish(0, title, 'cms', 'failed', cmsResult.message);
             }
         } catch (e) {
             result.cms = { success: false, error: e.message };
@@ -300,7 +322,7 @@ async function publishFlow(options) {
                 result.wechat = { success: false, error: '微信配置缺失' };
                 result.errors.push('微信配置缺失');
                 console.error('   ❌ 微信配置缺失');
-                await logPublish(title, 'wechat', 'failed', { error: '微信配置缺失' });
+                await logPublish(cmsAid || 0, title, 'wechat', 'failed', '微信配置缺失');
             } else {
                 const token = await getWechatToken(wc.appId, wc.appSecret);
                 const wechatResult = await publishToWechatDraft(token, title, finalContentHtml, thumbMediaId, wc.author);
@@ -308,19 +330,19 @@ async function publishFlow(options) {
                 if (wechatResult.errcode === 0 || wechatResult.media_id) {
                     result.wechat = { success: true, mediaId: wechatResult.media_id || wechatResult.draft_id };
                     console.log(`   ✅ 微信发布成功 (MediaID: ${wechatResult.media_id || wechatResult.draft_id})`);
-                    await logPublish(title, 'wechat', 'success', { mediaId: wechatResult.media_id });
+                    await logPublish(cmsAid || 0, title, 'wechat', 'success', '');
                 } else {
                     result.wechat = { success: false, error: JSON.stringify(wechatResult) };
                     result.errors.push('微信发布失败: ' + JSON.stringify(wechatResult));
                     console.error(`   ❌ 微信发布失败: ${JSON.stringify(wechatResult)}`);
-                    await logPublish(title, 'wechat', 'failed', { error: JSON.stringify(wechatResult) });
+                    await logPublish(cmsAid || 0, title, 'wechat', 'failed', JSON.stringify(wechatResult));
                 }
             }
         } catch (e) {
             result.wechat = { success: false, error: e.message };
             result.errors.push('微信异常: ' + e.message);
             console.error(`   ❌ 微信异常: ${e.message}`);
-            await logPublish(title, 'wechat', 'failed', { error: e.message });
+            await logPublish(cmsAid || 0, title, 'wechat', 'failed', e.message);
         }
     }
 
